@@ -1,0 +1,22 @@
+{
+  "name": "rkmed",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:status": "supabase status",
+    "db:reset": "supabase db reset --local",
+    "db:lint": "supabase db lint --local --level warning",
+    "db:test": "supabase test db",
+    "db:types": "supabase gen types typescript --local"
+  },
+  "devDependencies": {
+    "supabase": "2.119.0"
+  },
+  "dependencies": {}
+}
