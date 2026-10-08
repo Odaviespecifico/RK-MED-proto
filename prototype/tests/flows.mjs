@@ -1,18 +1,27 @@
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright-core'
 
-const origin = 'http://127.0.0.1:5173'
+const origin = process.env.RKMED_TEST_URL ?? 'http://127.0.0.1:5173'
 const browser = await chromium.launch({ executablePath: '/usr/bin/brave-browser', headless: true, args: ['--no-sandbox', '--disable-gpu'] })
 const context = await browser.newContext({ viewport: { width: 390, height: 844 } })
 const page = await context.newPage()
 
 try {
   await page.goto(`${origin}/`)
+  const partnerMap = page.getByRole('region', { name: 'Localizações dos parceiros' })
+  await partnerMap.getByRole('button', { name: /Movimento Studio/ }).click()
+  await partnerMap.getByText('Av. Estácio Coimbra, 218 · Carpina, PE').last().waitFor()
+  assert.match(await partnerMap.getByRole('link', { name: 'Abrir no Google Maps' }).getAttribute('href'), /Est%C3%A1cio%20Coimbra/)
   await page.screenshot({ path: '/tmp/rkmed-landing-mobile.png', fullPage: true })
   await page.goto(`${origin}/entrar`)
+  await page.getByRole('button', { name: 'Login com whatsapp' }).click()
+  await page.getByRole('heading', { name: 'Seu WhatsApp' }).waitFor()
+  await page.getByRole('button', { name: 'Escolher outro meio' }).click()
   await page.getByRole('button', { name: 'Login com email' }).click()
   await page.getByPlaceholder('ana@exemplo.com').fill('ana@exemplo.com')
   await page.getByRole('button', { name: 'Continuar' }).click()
+  await page.getByRole('button', { name: 'Não chegou? Reenviar e-mail' }).click()
+  await page.getByRole('status').getByText('Novo código enviado por e-mail', { exact: false }).waitFor()
   await page.getByPlaceholder('••••••').fill('123456')
   await page.getByRole('button', { name: 'Acessar meu cartão' }).click()
   await page.getByRole('img', { name: 'QR do cartão do associado' }).waitFor()
@@ -32,6 +41,7 @@ try {
   await page.goto(`${origin}/acesso-admin`)
   await page.getByPlaceholder('••••••••').fill('demo123')
   await page.getByRole('button', { name: 'Entrar', exact: true }).click()
+  await page.getByRole('button', { name: 'Abrir navegação' }).click()
   await page.getByRole('button', { name: /Cobranças/ }).click()
   await page.getByRole('button', { name: 'Enviar link' }).click()
   await page.getByRole('button', { name: 'Confirmar ação' }).click()
@@ -42,19 +52,41 @@ try {
   await page.getByPlaceholder('Como está no seu documento').fill('Beatriz Martins')
   await page.getByPlaceholder('000.000.000-00').fill('52998224725')
   await page.locator('input[type=date]').fill('1990-01-01')
-  await page.getByPlaceholder('seu@email.com').fill('beatriz@exemplo.com')
+  await page.getByRole('button', { name: 'Continuar' }).click()
   await page.getByPlaceholder('(81) 99999-9999').fill('81999990003')
   await page.getByRole('button', { name: 'Continuar' }).click()
-  await page.locator('input[type=file]').setInputFiles('tests/fixtures/face-portrait.jpg')
-  await page.getByText('Um rosto detectado', { exact: false }).waitFor({ timeout: 30000 })
+  await page.getByLabel('Código enviado por WhatsApp').fill('123456')
+  await page.getByRole('button', { name: 'Confirmar WhatsApp' }).click()
+  await page.getByPlaceholder('seu@email.com').fill('beatriz@exemplo.com')
   await page.getByRole('button', { name: 'Continuar' }).click()
   await page.getByLabel('Código enviado por e-mail').fill('123456')
-  await page.getByLabel('Código enviado por WhatsApp').fill('123456')
+  await page.getByRole('button', { name: 'Confirmar e-mail' }).click()
+  await page.getByRole('button', { name: 'Escolher foto' }).click()
+  const offCropImage = await page.evaluate(async () => {
+    const portrait = new Image()
+    portrait.src = '/demo-ana.webp'
+    await portrait.decode()
+    const canvas = document.createElement('canvas')
+    canvas.width = 1800
+    canvas.height = 600
+    const context = canvas.getContext('2d')
+    context.fillStyle = '#ffffff'
+    context.fillRect(0, 0, canvas.width, canvas.height)
+    context.drawImage(portrait, 0, 0, 500, 600)
+    return canvas.toDataURL('image/png').split(',')[1]
+  })
+  await page.locator('input[type=file]').setInputFiles({ name: 'rosto-fora-do-recorte.png', mimeType: 'image/png', buffer: Buffer.from(offCropImage, 'base64') })
+  await page.getByText('Não encontramos um rosto nítido', { exact: false }).waitFor({ timeout: 30000 })
+  await page.locator('input[type=file]').setInputFiles('tests/fixtures/face-portrait.jpg')
+  await page.getByText('Um rosto detectado', { exact: false }).waitFor({ timeout: 30000 })
   await page.locator('input[type=checkbox]').check()
   await page.getByRole('button', { name: 'Finalizar cadastro de demonstração' }).click()
   await page.getByText('Você chegou!').waitFor()
   assert.ok(await page.getByText('Você chegou!').isVisible())
   console.log('PASS: email OTP, member QR, partner purchase, admin collection, facial detection, and dual-OTP enrollment.')
+} catch (error) {
+  await page.screenshot({ path: '/tmp/rkmed-flow-failure.png', fullPage: true })
+  throw error
 } finally {
   await browser.close()
 }

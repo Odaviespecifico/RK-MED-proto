@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { calculateDiscount, isEligible, memberSavings, validCpf } from '../src/lib/demo.ts'
+import { activeWorkAssignment, calculateDiscount, isEligible, memberSavings, validCpf } from '../src/lib/demo.ts'
 
 test('rejects invalid or repeated-digit CPF and accepts a valid test CPF', () => {
   assert.equal(validCpf('123.456.789-09'), true)
@@ -27,4 +27,15 @@ test('reversed purchases no longer contribute to displayed savings', () => {
     { memberId: 'b', discountCents: 300 },
   ]
   assert.equal(memberSavings('a', purchases), 500)
+})
+
+test('a work session is valid only for its active employee and assigned partner', () => {
+  const state = {
+    partners: [{ id: 'vida' }, { id: 'studio' }],
+    employees: [{ id: 'marina', partnerId: 'vida', active: true }],
+  }
+  assert.equal(activeWorkAssignment(state, { employeeId: 'marina', partnerId: 'vida' })?.partner.id, 'vida')
+  assert.equal(activeWorkAssignment(state, { employeeId: 'marina', partnerId: 'studio' }), null)
+  state.employees[0].active = false
+  assert.equal(activeWorkAssignment(state, { employeeId: 'marina', partnerId: 'vida' }), null)
 })

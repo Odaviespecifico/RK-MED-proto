@@ -148,6 +148,8 @@ User manages frontend deployment. `vercel.json` declares Vite, `npm run build`, 
 
 ## Local bootstrap status
 
+Mobile frontend refinement is implemented in the prototype: QR-first phone layout, labeled staff navigation drawer, compact partner results, larger touch targets and viewport-bounded dialogs. Responsive checks pass from 320–768px; see `prototype/DESIGN_AUDIT.md`. Physical Android/iPhone verification remains outstanding.
+
 See `README.md` for executable commands and current verification results. The initial migration intentionally creates only a private bootstrap marker and pgTAP smoke tests, not a prematurely finalized billing schema. `prototype/` provides the design and frontend flows with fictional local data, including live camera face detection during enrollment, still-photo validation, QR scanning, purchase/savings, and staff views. Its authentication and payment actions are simulations; Supabase-backed enforcement remains to be built. Business fixtures and role tests belong to phases 2–4. Camera operation still needs real Android and iPhone verification over HTTPS.
 
 Production deployment, live payments/messages and remote Supabase projects are outside this bootstrap. Secrets are supplied through ignored environment files/secret stores. No user password is required in chat.

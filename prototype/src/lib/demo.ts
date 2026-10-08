@@ -19,6 +19,7 @@ export type Purchase = {
   memberId: string
   partnerId: string
   employee: string
+  employeeId?: string
   grossCents: number
   discountCents: number
   finalCents: number
@@ -31,6 +32,14 @@ export type Partner = { id: string; name: string; segment: string; discount: num
 export type Employee = { id: string; name: string; partnerId: string; code: string; active: boolean }
 export type CollectionLog = { id: string; memberId: string; action: 'link' | 'retry'; createdAt: string; actor: string; invoiceRef: string }
 export type DemoState = { members: Member[]; purchases: Purchase[]; partners: Partner[]; employees: Employee[]; collectionLogs: CollectionLog[] }
+export type WorkSession = { employeeId: string; partnerId: string }
+
+export function activeWorkAssignment(state: Pick<DemoState, 'partners' | 'employees'>, session: WorkSession | null) {
+  if (!session) return null
+  const partner = state.partners.find(item => item.id === session.partnerId)
+  const employee = state.employees.find(item => item.id === session.employeeId && item.active && item.partnerId === session.partnerId)
+  return partner && employee ? { partner, employee } : null
+}
 
 export const DEMO_OTP = '123456'
 export const DEMO_PASSWORD = 'demo123'

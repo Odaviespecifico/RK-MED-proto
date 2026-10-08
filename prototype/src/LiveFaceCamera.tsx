@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Camera, CircleAlert, X } from 'lucide-react'
 import { Button } from './components/ui/button'
-import { createLiveFaceDetector } from './lib/face'
+import { countUsableFaces, createLiveFaceDetector } from './lib/face'
 
 type Props = { onCapture: (file: File) => void; onClose: () => void }
 
@@ -19,6 +19,7 @@ export function LiveFaceCamera({ onCapture, onClose }: Props) {
     let detector: Awaited<ReturnType<typeof createLiveFaceDetector>> | undefined
     let frame = 0
     let lastCheck = 0
+    let consecutiveFaceFrames = 0
 
     async function start() {
       try {
@@ -37,7 +38,9 @@ export function LiveFaceCamera({ onCapture, onClose }: Props) {
           if (video && detector && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && now - lastCheck >= 150) {
             lastCheck = now
             try {
-              const next = detector.detectForVideo(video, now).detections.length
+              const detected = countUsableFaces(detector.detectForVideo(video, now).detections, video.videoWidth, video.videoHeight, true)
+              consecutiveFaceFrames = detected === 1 ? consecutiveFaceFrames + 1 : 0
+              const next = detected === 1 && consecutiveFaceFrames < 3 ? 0 : detected
               countRef.current = next
               setCount(previous => previous === next ? previous : next)
             } catch {
