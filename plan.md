@@ -1,6 +1,6 @@
 # RKMED Linha Gold — implementation plan
 
-Baseline reviewed: `RKMED Levantamento  Requisitos MVP (Versão 02).docx` (cover version 2.0, May 2026). Planning date: 2026-10-06. Status: discovery in progress; an interactive frontend prototype exists in `prototype/`, while production backend/business integration is not implemented. Answers 1–27 incorporated. Twilio resolves phone delivery; dual verification and offline action rules are confirmed. Resend and both audited collection actions are confirmed; employee codes are confirmed once per work session. Remaining discovery is tracked below.
+Baseline reviewed: `RKMED Levantamento  Requisitos MVP (Versão 02).docx` (cover version 2.0, May 2026). Planning date: 2026-10-06. Status: implementação conectada em andamento para homologação, sem deploy. Domínio privado/RLS, Auth, foto validada no backend, cartão, balcão, compras idempotentes, estorno e gestão local implementados; endpoints Stripe/Twilio/Resend preparados e fechados sem credenciais. Provedores reais de teste, QA em celulares e demais critérios da matriz continuam pendentes. Decisões de arquitetura e controles foram confirmadas/delegadas em 2026-10-19. O [roteiro atual](docs/homologacao.md) separa execução local de aceitação externa.
 
 ## Confirmed direction
 
@@ -14,7 +14,7 @@ The source defines a benefits club with public acquisition, adult enrollment, re
 
 | ID | Issue and source | Status / required decision |
 | --- | --- | --- |
-| D01 | §2 names both Next.js and Fastify | Confirmed: React/Vite, no Next. Proposed: Supabase Edge Functions + Postgres RPCs; API-only versus RLS browser reads still open. |
+| D01 | §2 names both Next.js and Fastify | Confirmed: React/Vite, no Next; Supabase Auth, RLS-scoped reads/RPCs and Edge Functions for privileged actions (D19). |
 | D02 | §1.4 R$60; RF-LP-01/RF-PAG-01 R$69.90; RN-07 R$69.99 | Confirmed: R$69.60/month (6960 BRL cents); user answer 2026-10-06. All source prices superseded. |
 | D03 | §1.2 100 subscribers vs RNF-04/RF-DG-11 200 | User: pilot size does not matter for current planning. Keep source load targets as engineering tests, not a subscriber cap. |
 | D04 | Past June–August 2026 dates; required panels/landing scheduled after go-live | User: dates do not matter for current planning. Use ordered phases without a fixed deadline. |
@@ -22,18 +22,18 @@ The source defines a benefits club with public acquisition, adult enrollment, re
 | D06 | §3.5/§8.2 rotating 120s QR vs RF-QR-02 UUID and RF-QR-05 cached QR | Confirmed: no rotation. Adopt revocable opaque static identifier, cached member card and online partner entitlement/photo validation. |
 | D07 | RF-QR-08 forbids history/savings; RF-QR-10 requires savings report | Confirmed: card, savings totals/history, partner search, billing management and support are included. Retain synced content offline indefinitely; disable all connectivity-dependent actions offline, with no queue. |
 | D08 | RF-PAG-05/07, RN-09, §8.4 disagree on retry timing and delinquency | Confirmed: immediate benefit loss; retries D+0/1/3; seller sees ineligibility. Add an admin support/collections section for failed payments and manual collection. |
-| D09 | RN-20 active-only vs RN-11 canceled access through paid cycle | Proposed: separate billing status, paid-through entitlement, cancellation scheduling, and manual block. |
+| D09 | RN-20 active-only vs RN-11 canceled access through paid cycle | Confirmed 2026-10-19: cancellation at the end of the paid period; payment failure/manual block override entitlement. Keep billing state, paid-through and scheduled cancellation separate. |
 | D10 | RF-PP-13 manager/96h vs RN-16 attendant/24h | Latest answer supersedes 96h: no time limit for reversals in admin panel by admins/RK support; retain reason and audit. |
 | D11 | RF-CAD-07/RN-04 six-digit PIN vs §8.1 four-to-six and RF-CAD-12 login recovery | Confirmed: no member PIN. No-phone fallback is authenticated partner exact CPF search plus visual photo confirmation and live eligibility. |
-| D12 | RF-CAD-06 1200px vs §8.1 600px; face detection comment | Confirmed: face detection only, not identity verification. Image dimensions, HEIC processor and failure fallback remain open. |
+| D12 | RF-CAD-06 1200px vs §8.1 600px; face detection comment | Confirmed: face detection only, not identity verification. User delegated implementation choices 2026-10-19: 600×600 JPEG, 5 MiB input limit, metadata stripping; clear rejection/retry when conversion or face detection fails. HEIC only when conversion is supported. |
 | D13 | Shared partner login plus employee code vs manager actions/auditable staff | Confirmed: shared partner account plus employee code validated against admin-managed establishment employee list. Enter/validate code once per work session; server binds employee attribution until operator switch/logout/expiry. |
-| D14 | RNF-07 8h/12h JWT, no refresh vs RF-PP-17 8h inactivity | Existing admin provisions staff using email/password; no mandatory MFA. Members remain signed in indefinitely via refreshed sessions. Staff-specific absolute/idle limits remain open. |
+| D14 | RNF-07 8h/12h JWT, no refresh vs RF-PP-17 8h inactivity | Existing admin provisions staff using email/password; no mandatory MFA. Members remain signed in indefinitely via refreshed sessions. User delegated policy 2026-10-19: staff maximum 8h and 30min inactivity, enforced server-side. Member sessions retain their confirmed independent policy. |
 | D15 | §6 INT-STR lists foreign event/header/endpoint conventions | Correct technical contract: Stripe SDK/API, Stripe-Signature, raw-body verification, invoice/subscription events; see references. |
-| D16 | Clickwrap in stack vs go-live contract generation/signing | Open: versioned clickwrap sufficient, or external signing/document generation required? |
-| D17 | RF-NOT-03 sales notified vs RF-PAG-06/member lifecycle notices | Open: exact event-to-recipient matrix, commercial role and escalation channels. |
-| D18 | RF-ADM-06 segment rate vs RN-12 unique partner rate | Proposed: segment defaults with explicit partner override, snapshot at transaction time. Confirm precedence. |
-| D19 | §6 bans browser Supabase client; user requests Supabase backend | Proposed: RLS-scoped safe reads/Auth directly, privileged workflows through Edge Functions. Confirm whether all data must go through API. |
-| D20 | RF-CAD-11 localStorage drafts vs CPF/photo/PIN minimization | Proposed: no persistent sensitive enrollment draft; opt-in minimal draft only after privacy decision. |
+| D16 | Clickwrap in stack vs go-live contract generation/signing | Delegated decision 2026-10-19: versioned checkbox clickwrap with server timestamps and accepted document versions; external signature is outside this MVP. |
+| D17 | RF-NOT-03 sales notified vs RF-PAG-06/member lifecycle notices | Delegated 2026-10-19: transactional notices to the affected member; operational failure/risk to the internal queue. No marketing automation. External delivery acceptance remains pending. |
+| D18 | RF-ADM-06 segment rate vs RN-12 unique partner rate | Confirmed 2026-10-19: explicit rate per partner; integer basis points, half-cent rounded upward, snapshot at commit. No commercial purchase cap approved; enforce safe integer technical bounds. |
+| D19 | §6 bans browser Supabase client; user requests Supabase backend | Confirmed 2026-10-19: Supabase Auth plus RLS-scoped reads/narrow RPCs; Edge Functions for providers and privileged integrations. |
+| D20 | RF-CAD-11 localStorage drafts vs CPF/photo/PIN minimization | Delegated decision 2026-10-19: sensitive enrollment remains transient, no persistent CPF/photo enrollment draft. |
 | D21 | Retention/incidents/consent assertions and missing referenced legal documents | Not approved. User requested test mocks with exact AI-generated warning. Added docs/legal-mocks; replacement/approval required before real enrollment. |
 | D22 | Budget table contradicts totals, gateway fees, plans, and currencies | Frontend hosting managed by user, likely Vercel. vercel.json added for future Vite build. Backend/provider ceiling remains open. |
 | D23 | Browser last-two-years vs iOS 14+/Android 8+ | Confirmed: Portuguese interface, Android and iPhone mix. Exact minimum OS/browser versions and test devices remain open. |
@@ -42,7 +42,7 @@ The source defines a benefits club with public acquisition, adult enrollment, re
 
 Questionnaire: `docs/discovery.md`. User answers supersede proposed defaults. Record answer, date, owner and affected requirement IDs here as decisions arrive.
 
-## Architecture proposal
+## Confirmed architecture
 
 ```text
 React/Vite + shadcn/ui
@@ -51,7 +51,7 @@ React/Vite + shadcn/ui
   partner: /parceiro/* — online
   internal: /admin/* — online, admin/support/viewer authorization
         |
-        +-- Supabase Auth + RLS-scoped reads (pending D19)
+        +-- Supabase Auth + RLS-scoped reads/narrow RPCs (confirmed D19)
         +-- Supabase Edge Functions: enrollment, card validation,
         |   transaction commands, billing, webhooks, notifications
         +-- PostgreSQL: entitlement, atomic money operations,
@@ -62,7 +62,7 @@ React/Vite + shadcn/ui
 
 One repository and deployment unit initially. No microservices or custom authentication system. Use server-owned role assignments. Evaluate Edge runtime compatibility for image conversion, OTP delivery, and scheduled jobs before committing to libraries; HEIC may need a dedicated processing service. A small additional worker is justified only by a proven constraint.
 
-Roles include member, shared partner account with employee code, admin, RK support, and viewer. Admins and RK support may perform operational changes; exact support permissions remain to be scoped. Mandatory MFA was declined. Viewers may see identifiable member records, with exact fields pending, but cannot mutate or export. Supabase roles are distinct from business roles.
+Roles include member, shared partner account with employee code, admin, RK support, and viewer. Admins and RK support manage operational changes; staff provisioning is admin-only. Mandatory MFA was declined. Viewers see name, masked CPF, status/dates and savings; contacts, photos, mutations and exports are denied. Supabase roles are distinct from business roles.
 
 Treat self-service signup as member-only. Never accept staff roles in enrollment data. Confirmed: an existing admin provisions staff with email/password. Bootstrap the first admin through a trusted operator process, not public role assignment. Session revocation/role changes must be enforced server-side rather than waiting solely for stale claims.
 
@@ -142,15 +142,25 @@ Proposed quality bar: 360px with no horizontal overflow, 44px targets, keyboard/
 
 ## Hosting and legal fixtures
 
-User manages frontend deployment. `vercel.json` declares Vite, `npm run build`, and `dist`; filesystem routes serve actual assets before SPA fallback, missing PWA/asset files return 404, hashed assets are immutable, and the service worker/manifest/HTML revalidate. The frontend now exists under `prototype/`; its build and browser walkthrough passed locally. The root Vercel config builds `prototype` and outputs `prototype/dist`, while `prototype/vercel.json` supports choosing the folder as Vercel root. A live Vercel preview still needs deployment under the user’s hosting account. Check deep-link reloads and PWA upgrades in Vercel preview once implemented. See [Vercel Vite guidance](https://vercel.com/docs/frameworks/frontend/vite).
+Production runbook documented in [docs/producao.md](docs/producao.md): service contracting, implementation prerequisites, staging, live configuration, launch acceptance and the final customer journey. Documentation only; production integrations, deployment and live acceptance remain outstanding.
+
+User manages frontend deployment. The frontend is now at the repository root: one package/lockfile, `src/`, `public/`, Vite config and `vercel.json` (`npm run build` → `dist`). The standalone prototype package/config was retired. Local `npm run dev` preserves the demonstration; `npm run dev:sandbox` uses port 5174 and real Supabase Auth preparation. Sandbox builds output `dist-sandbox`, omit demo modules and do not register the demonstration service worker. No deployment was performed. See [development guide](docs/desenvolvimento.md).
 
 `docs/legal-mocks/` includes terms, privacy, photo notice and notification templates. Every test page/message must visibly include: **Esse texto deve ser modificado por ter sido inteiramente gerado por IA e serve apenas para testes.** Mock consent versions are never accepted as real production consent.
 
-## Local bootstrap status
+## Historical local bootstrap milestones
 
-Mobile frontend refinement is implemented in the prototype: QR-first phone layout, labeled staff navigation drawer, compact partner results, larger touch targets and viewport-bounded dialogs. Responsive checks pass from 320–768px; see `prototype/DESIGN_AUDIT.md`. Physical Android/iPhone verification remains outstanding.
+Frontend promotion: the root application preserves the existing CSS/interface. Common landing/login components are shared; demo fixtures/sessions/workflows are lazy-loaded exclusively from `src/mocks/`. Sandbox has public config validation, a Supabase client with isolated refresh-based sessions, an OTP adapter and a fail-closed Checkout contract. Server-only Stripe sandbox and disabled-by-default allowlisted Twilio WhatsApp sandbox adapters are prepared, with no deployed Edge endpoints, no real messages or remote payment operations. This paragraph records the earlier Auth-only milestone; D19 is now confirmed and domain access implemented below.
 
-See `README.md` for executable commands and current verification results. The initial migration intentionally creates only a private bootstrap marker and pgTAP smoke tests, not a prematurely finalized billing schema. `prototype/` provides the design and frontend flows with fictional local data, including live camera face detection during enrollment, still-photo validation, QR scanning, purchase/savings, and staff views. Its authentication and payment actions are simulations; Supabase-backed enforcement remains to be built. Business fixtures and role tests belong to phases 2–4. Camera operation still needs real Android and iPhone verification over HTTPS.
+Promotion verification (2026-10-19): application/provider typecheck, 27 automated tests, both builds, demonstration E2E, 320–768px layouts, sandbox isolation/OTP rejection and built-PWA offline card/savings reload passed. Original CSS bytes were preserved; sandbox output contains no demo fixtures/session keys or demo service worker. Real provider delivery and physical-phone acceptance remain outstanding.
+
+Stripe test tooling (RF-PAG) implemented separately from the application: pinned SDK/CLI, test-only account/config guards, synthetic recurring catalog/Checkout and standalone draft invoice commands, plus a loopback webhook receiver with signed raw-body verification and deduplicated minimal receipts. Thirteen offline tests passed on 2026-10-19, including HTTP verification outside the agent sandbox. See [docs/stripe-testes.md](docs/stripe-testes.md). The operator explicitly deferred sandbox credentials and remote execution; no Stripe account objects were created. This does not implement application billing, member activation, production webhook persistence or retries. The MCP planner remains unavailable; official Stripe skills were installed through the requested fallback.
+
+Verified 2026-10-19: Docker is accessible outside the agent sandbox; the local `rkmed` Supabase stack starts successfully with CLI 2.119.0. Local migration/seed recreation (`npm run db:reset`), SQL lint and all seven bootstrap pgTAP checks passed. Ignored root `.env.local` contains local public frontend configuration. At this earlier bootstrap milestone only Auth preparation was present; current connected implementation is recorded below. The ordered development checklist is tracked in [docs/producao.md](docs/producao.md#4-implementar-o-backend-e-conectar-as-telas).
+
+Mobile frontend refinement is implemented in the prototype: QR-first phone layout, labeled staff navigation drawer, compact partner results, larger touch targets and viewport-bounded dialogs. Responsive checks pass from 320–768px; see `docs/DESIGN_AUDIT.md`. Physical Android/iPhone verification remains outstanding.
+
+See `README.md` for executable commands and current verification results. The initial migration intentionally creates only a private bootstrap marker and pgTAP smoke tests, not a prematurely finalized billing schema. `src/mocks/` preserves the demonstration frontend flows with fictional local data, including live camera face detection during enrollment, still-photo validation, QR scanning, purchase/savings, and staff views. Its authentication and payment actions are simulations; Supabase-backed enforcement is now implemented separately in sandbox mode. Business fixtures and role tests belong to phases 2–4. Camera operation still needs real Android and iPhone verification over HTTPS.
 
 Production deployment, live payments/messages and remote Supabase projects are outside this bootstrap. Secrets are supplied through ignored environment files/secret stores. No user password is required in chat.
 
@@ -166,3 +176,48 @@ These references correct technical integration contracts, not unresolved busines
 - [Supabase Send SMS Hook](https://supabase.com/docs/guides/auth/auth-hooks/send-sms-hook) and [phone authentication](https://supabase.com/docs/guides/auth/phone-login): support the WhatsApp OTP integration decision; Z-API has been removed by the user. Validate hook signature, provider outage behavior and plan availability before implementation.
 
 - [Supabase sessions](https://supabase.com/docs/guides/auth/sessions): persistent refresh-based sessions with short-lived access tokens. [Phone sign-in](https://supabase.com/docs/guides/auth/phone-login) supports WhatsApp through Twilio/Twilio Verify; email transport remains a separate choice.
+
+## Implementation choices delegated on 2026-10-19
+
+User confirmed D19 and the proposed discount/rounding/cancellation rules; the answer “Faça o que você achar melhor” delegated remaining MVP implementation choices. Support can manage partner/employee/member operations, reverse records and collect existing invoices but cannot provision staff/roles. Viewer sees name, masked CPF, membership status/dates and savings only; no contact details, photos, mutation or exports. Admin alone provisions staff. Use versioned clickwrap, 600×600 sanitized JPEG, staff 8h/30min sessions and no persistent sensitive enrollment drafts. Transactional notices go to the affected member and operational failures to the internal queue; no marketing automation. Provider credentials and real-device/provider acceptance remain external dependencies. These are implementation decisions for test readiness, not approval of mock legal text for production.
+
+
+## Connected implementation — 2026-10-19
+
+Supabase local now has private domain tables, explicit RLS/grants, verified-session RPCs, scoped photos, server employee sessions, short-lived validation receipts, integer-cent quotes, atomic/idempotent purchases, linked reversals, admin blocks, partner/employee controls and viewer-safe projections. Synthetic seed covers paid/blocked members, two establishments, staff roles and pending enrollment. Shared shell keeps original styling; sandbox panels use real local Auth/RPC/Storage.
+
+Enrollment links email/phone verification on the same Auth identity, records versioned consent and remains incomplete without payment. The Edge photo path validates a 600px JPEG and a single face with a bundled local model, then strips metadata. Sandbox Stripe endpoints enforce test-account/catalog binding, one pending Checkout, customer/invoice ownership, operator confirmations, signed durable event receipts and leased current-state reconciliation. Risk events queue review. Auth hooks verify Standard Webhooks; channel intents, provider recipient allowlists and rate limits are server-owned. Outbox jobs use leases/backoff and Resend idempotency; provider acceptance is not delivery confirmation. Billing retry timing still requires sandbox Dashboard configuration/acceptance.
+
+The member PWA uses static-only precache and an explicit account-scoped snapshot. Offline status is historical, actions are disabled, and no operational commands are queued. Offline lifecycle acceptance is tracked in the test results/runbook; real-phone HTTPS acceptance remains required.
+
+Earlier bootstrap/promotion paragraphs are historical milestones, not the current implementation limit. Full MVP acceptance is still open: external credentials/provider journeys, hosted realtime acceptance, load/performance, recovery/monitoring and legal/device acceptance. Do not report the system as 100% homologated or production-ready. No external payment, message, deployment, project provisioning or credential publication was performed.
+
+
+## Local verification — 2026-10-20
+
+Application/Edge typecheck, demo/sandbox builds, 33 automated tests, SQL lint and 66 pgTAP assertions passed. Connected browser journeys cover public versioned legal documents, private member photo, counter quote/purchase, viewer restrictions and member card. Enrollment/Edge tests passed against the real Docker runtime. Transport failure is distinguished from HTTP authorization refusal before opening the account-scoped offline snapshot; logout/account isolation passed. Enrollment now exposes resend/SMS fallback with cooldown. External messaging/payment acceptance and the remaining items in `docs/homologacao.md` are still open. No production publication.
+
+
+## Reports and export verification — 2026-10-21
+
+RF-ADM/DG reports are implemented with server-side aggregates, Recife period boundaries (maximum 366 days), optional partner filter and reversal reconciliation. Aggregates retain exact cents as strings. Admin/support can export up to 5,000 rows with masked CPF, no contacts/photos/QR, durable audit and five-per-minute actor rate limit. Viewer export is rejected by the database. CSV neutralizes formula-like prefixes and preserves quoted boundaries. Reports explicitly describe purchase totals rather than subscription revenue.
+
+Verification completed: 35 automated tests, 92 pgTAP assertions, typecheck and sandbox build passed; SQL lint passed for the report migration in the preceding round. The connected mobile report test passed for viewer denial in UI/API and authorized CSV download. The prior test failure was corrected by changing the historical date fixture and rerunning SQL successfully. Removed the general no-op refresh button on the reports tab; use the explicit report query action. Remaining production work includes hosted load/performance, recovery/monitoring, provider sandbox acceptance and legal/physical-device approval. No deployment or external delivery was performed.
+
+
+## Operational realtime alerts — 2026-10-21
+
+RF-ADM/DG/NOT implemented locally: private outbox, webhook and subscription changes invalidate a single public signal row (id/revision/timestamp only). Only that minimal table is added to `supabase_realtime`. RLS checks server-owned admin/support roles, actual Auth session, 8h maximum and 30min inactivity for each read/event; summary reads do not update staff activity. The protected summary contains counts only. Viewer/member/partner/anonymous cannot receive signals or query totals. No browser writes are granted on the signal.
+
+The internal panel refreshes on signal, subscription/reconnection and visibility return, coalesces bursts and falls back to a 30s visible-page query. Errors clear counters; offline controls are disabled. Manual navigation to collections reloads details even when that tab is already open. Risk counts represent recorded signals and remain after email acceptance; this feature does not implement structured risk closure or change billing eligibility. Charts/reports remain refreshed on demand.
+
+Validation: 36 automated tests, 124 pgTAP assertions, SQL lint, application/Edge typecheck and sandbox build passed. Real local Realtime/WebSocket plus mobile browser verified update without manual refresh, minimal payload, role isolation and revocation during an existing subscription. Provider delivery, hosted realtime limits/reliability, hosted load/performance, recovery/monitoring and physical-device/legal approval remain pending. No deployment or external messages/payments.
+
+
+## Bounded pagination and local performance — 2026-10-21
+
+RF-ADM/DG/PP/QR implemented: cursor pages by (created_at,id), default 25/max 100, literal server-side name search, past-due filter and supporting indexes. Member/partner scopes are selected from verified server roles before limiting rows. Member directory savings and own-member balance aggregate all valid purchases independently of page size and retain exact cents. Legacy RPCs are bounded at 100 and removed from browser adapters; current UI never calls them. Administration no longer loads all purchases to compute each member's savings or unrelated lists on every tab.
+
+The member snapshot merges visited history pages without deleting older saved records, persists the full balance separately and supports local offline paging with an incompleteness notice. Prior snapshots remain readable. Account changes remount the connected panels; stale responses cannot replace a newer search. No payment/operational action is queued offline.
+
+Validation: 37 automated tests, 155 pgTAP assertions, lint/typecheck/sandbox build, connected mobile counter/pagination and offline behavior passed. Local HTTP benchmark: 2,000 generated members, 10,060 purchases, 200 paginated reads at concurrency 10 and 50 distinct simultaneous commits across two partner sessions. p95 pages=117.15ms, lookup=127.82ms, quote=90.58ms, commit=173.25ms. Generated fixtures were removed without resetting seed data; no provider calls. See `docs/desempenho.md` and machine-readable `docs/performance-local.json` for methodology, environment and limitations. Hosted latency, cold starts, provider behavior and representative production SLA remain unverified.

@@ -1,8 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
-  "buildCommand": "npm --prefix prototype run build",
-  "outputDirectory": "prototype/dist",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
   "routes": [
     {
       "src": "/assets/(.*)",
@@ -39,5 +39,5 @@
       "dest": "/index.html"
     }
   ],
-  "installCommand": "npm --prefix prototype ci"
+  "installCommand": "npm ci"
 }

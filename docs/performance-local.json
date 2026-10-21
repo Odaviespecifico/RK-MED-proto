@@ -1,0 +1,53 @@
+{
+  "measuredAt": "2026-10-21T21:07:59.405Z",
+  "environment": "Supabase Docker local on loopback; no external provider calls",
+  "machine": {
+    "platform": "linux",
+    "cpu": "13th Gen Intel(R) Core(TM) i7-13620H",
+    "logicalCpus": 16
+  },
+  "dataset": {
+    "syntheticMembers": 2000,
+    "syntheticPurchasesBefore": 10060
+  },
+  "methodology": {
+    "warmupRequests": 8,
+    "pageRequests": 200,
+    "pageConcurrency": 10,
+    "concurrentDistinctCommits": 50,
+    "partnerSessions": 2
+  },
+  "results": {
+    "pages": {
+      "requests": 200,
+      "p50Ms": 29.67,
+      "p95Ms": 117.15,
+      "maxMs": 335.63
+    },
+    "lookups": {
+      "requests": 50,
+      "p50Ms": 90.96,
+      "p95Ms": 127.82,
+      "maxMs": 131.32
+    },
+    "quotes": {
+      "requests": 50,
+      "p50Ms": 68.15,
+      "p95Ms": 90.58,
+      "maxMs": 92.74
+    },
+    "commits": {
+      "requests": 50,
+      "p50Ms": 104.77,
+      "p95Ms": 173.25,
+      "maxMs": 178.93
+    }
+  },
+  "targets": {
+    "apiP95Ms": 500,
+    "lookupP95Ms": 2000
+  },
+  "targetsMetLocally": true,
+  "limits": "Local warm benchmark. Does not establish hosted SLA, internet/mobile latency, cold starts or external provider behavior.",
+  "generatedFixtureRemoved": true
+}

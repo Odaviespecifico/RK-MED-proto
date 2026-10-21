@@ -7,16 +7,16 @@
 3. Use `RKMED Levantamento  Requisitos MVP (Versão 02).docx` as the baseline, preserving requirement IDs in backlog items and relevant tests. Do not modify this source document.
 4. Unresolved contradictions are not approved requirements. Implement independent foundations; ask targeted questions before encoding disputed billing, eligibility, identity, or retention policies.
 
-The `prototype/` folder now contains an interactive React/Vite frontend mock. It demonstrates screens and local browser behavior only. Full Supabase authorization, real OTP delivery, billing, messages and production privacy controls remain planned. Do not present mock route guards, masked UI values or local OTP constants as real security.
+The application lives at the repository root (`src/`, `public/`, Vite config and one package/lockfile). `prototype/` is an archived pointer. `src/mocks/` contains the isolated demonstration and fake browser sessions. Sandbox mode uses real local Supabase Auth, narrow RPCs with RLS, private Storage and privileged Edge Functions. Server-only provider adapters live under `supabase/functions/_shared/providers/`. Local enrollment, card, counter, administration and provider workflows are implemented; external-provider, device and production acceptance remain pending. See `docs/homologacao.md` for verified coverage. Keep demo and sandbox sessions/data separate and never fall back to mock success on provider failure. See `docs/desenvolvimento.md` for current commands and limitations.
 
 ## Fixed technical direction
 
 - React with Vite and TypeScript; **no Next.js**, Next server actions, or Next API routes.
 - shadcn/ui with Tailwind CSS for accessible, sophisticated interfaces. Reuse design tokens and primitives; avoid a collection of unrelated dashboard templates.
 - Supabase PostgreSQL, Auth, private Storage, migrations, and local Docker development.
-- Proposed backend: Supabase Edge Functions for privileged workflows and providers, PostgreSQL functions for atomic operations. Do not add a separate Fastify service unless a demonstrated runtime need warrants it.
+- Confirmed backend: Supabase Edge Functions for privileged workflows and providers, PostgreSQL functions for atomic operations. Do not add a separate Fastify service unless a demonstrated runtime need warrants it.
 - Proposed frontend libraries: React Router, TanStack Query, React Hook Form, Zod, and a Vite-compatible PWA/Workbox integration. Verify current compatibility when installing and commit a lockfile.
-- The prototype keeps public, member, partner, and internal route areas in one frontend. Future production implementation should use a maintainable codebase with those areas. Lazy-load privileged panels, charts, and camera readers.
+- The root application keeps public, member, partner, and internal route areas in one frontend; the demonstration remains isolated from sandbox adapters. Lazy-load privileged panels, charts, and camera readers.
 
 ## Business invariants
 
@@ -25,12 +25,12 @@ The `prototype/` folder now contains an interactive React/Vite frontend mock. It
 - Legal text is unapproved. Use `docs/legal-mocks/` only in tests with the exact visible AI warning; production must reject mock document versions.
 
 - Confirmed price: R$69.60/month (6960 cents). Payment failure immediately removes benefits; retries occur on D+0, D+1 and D+3. The seller must see ineligibility.
-- Shared partner account plus employee code is confirmed. Directors can see identifiable member records (exact fields pending). Admins and RK support manage operational actions; detailed support limits remain to be defined.
+- Shared partner account plus employee code is confirmed. Directors see name, masked CPF, membership status/dates and savings, without contacts, photos, exports or mutations. Admins and RK support manage operational actions; only admins provision staff.
 - Admins/RK support reverse records from the admin panel without a time limit, retaining reasons and audit. Pilot size/date are not planning blockers per the user.
 
 - RKMED records partner discounts; customers pay partners directly. No split payments, commissions, medical records, diagnoses, or exam categories.
 - Adult individual membership only. Family plans, native apps, pharmacy, referrals, physical cards, ERP, chatbots, and browser push remain outside the baseline MVP.
-- Monetary values use integer BRL cents; discounts use integer basis points. Compute totals on the server and snapshot the applied rate on each transaction. Agree rounding and limits before implementation.
+- Monetary values use integer BRL cents; discounts use integer basis points. Compute totals on the server and snapshot the applied rate on each transaction. Round half-cent upward. Use the explicit partner rate and enforce safe-integer technical bounds; no commercial purchase cap is approved.
 - Membership entitlement is checked on the server at validation **and transaction commit**, including administrative blocks and paid-through cancellation dates.
 - Record reversals as linked, auditable entries. Never erase original transactions or interpret a partner record reversal as a Stripe refund.
 - Payment success pages never activate membership. Only verified provider events/reconciliation may establish payment.
