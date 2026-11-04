@@ -25,11 +25,19 @@ export function createStripeSandbox(env: Environment, transport?: Pick<Stripe, '
       if (price.livemode !== false || !price.active || price.currency !== 'brl' || price.unit_amount !== 6960
         || price.recurring?.interval !== 'month' || price.recurring.interval_count !== 1) throw new StripeSandboxError('Preço de sandbox incompatível.')
       const session = await client.checkout.sessions.create({
-        mode: 'subscription', customer: customerId, line_items: [{ price: price.id, quantity: 1 }],
-        integration_identifier: `rkmed_sandbox_${operationId.replace(/-/g, '').slice(0, 8).split('').map(n => String.fromCharCode(97 + parseInt(n, 16))).join('')}`,
+        mode: 'subscription', line_items: [{ price: price.id, quantity: 1 }],
+        ui_mode: 'hosted_page',
+        billing_address_collection: 'auto',
+        phone_number_collection: { enabled: true },
+        automatic_tax: { enabled: false },
+        allow_promotion_codes: true,
+        payment_method_collection: 'always',
+        submit_type: 'auto',
+        name_collection: { individual: { enabled: true } },
+        saved_payment_method_options: { payment_method_save: 'enabled' },
+        integration_identifier: 'hosted_mobile_app_0001',
+        origin_context: 'mobile_app',
         success_url: `${origin.origin}/app/cobranca?checkout=processing`, cancel_url: `${origin.origin}/app/cobranca`,
-        metadata: { rkmed_environment: env.APP_ENV! },
-        subscription_data: { metadata: { rkmed_environment: env.APP_ENV! } },
       }, { idempotencyKey: `${env.STRIPE_TEST_ACCOUNT_ID}:${operationId}` })
       if (session.livemode !== false || !session.url) throw new StripeSandboxError('Resposta de Checkout incompatível com testes.')
       return { url: session.url, sessionId: session.id, livemode: false }

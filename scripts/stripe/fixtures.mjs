@@ -50,10 +50,18 @@ export async function createCheckout(stripe, config) {
   const { price } = await ensureCatalog(stripe, config);
   const runId = randomUUID();
   const session = await stripe.checkout.sessions.create({
-    mode: 'subscription', locale: 'pt-BR', line_items: [{ price: price.id, quantity: 1 }],
-    integration_identifier: `rkmed_sandbox_${Array.from(randomBytes(8), n => String.fromCharCode(97 + n % 26)).join('')}`,
-    client_reference_id: `synthetic-${runId}`,
-    metadata: metadata(config, runId), subscription_data: { metadata: metadata(config, runId) },
+    mode: 'subscription', line_items: [{ price: price.id, quantity: 1 }],
+    ui_mode: 'hosted_page',
+    billing_address_collection: 'auto',
+    phone_number_collection: { enabled: true },
+    automatic_tax: { enabled: false },
+    allow_promotion_codes: true,
+    payment_method_collection: 'always',
+    submit_type: 'auto',
+    name_collection: { individual: { enabled: true } },
+    saved_payment_method_options: { payment_method_save: 'enabled' },
+    integration_identifier: 'hosted_mobile_app_0001',
+    origin_context: 'mobile_app',
     success_url: `${config.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${config.origin}/cancel`,
   }, { idempotencyKey: `${config.accountId}:checkout:${runId}` });
