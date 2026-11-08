@@ -4,7 +4,7 @@ import type { PublicConfig } from '../lib/config'
 let current: { signature: string; client: SupabaseClient } | undefined
 
 export function createSupabase(config: PublicConfig) {
-  if (config.mode !== 'sandbox') throw new Error('Cliente real indisponível no modo de demonstração.')
+  if (config.mode !== 'sandbox') throw new Error('Cliente real indisponível neste modo.')
   const signature = JSON.stringify([config.supabaseUrl, config.supabaseKey, config.environment, config.projectRef])
   if (current?.signature === signature) return current.client
   const client = createClient(config.supabaseUrl, config.supabaseKey, {

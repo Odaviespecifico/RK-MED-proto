@@ -35,11 +35,11 @@ export function readPublicConfig(env: Record<string, string | boolean | undefine
     const local = url.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(url.hostname)
     const sandbox = url.protocol === 'https:' && /^[a-z0-9]+$/.test(projectRef) && url.hostname === `${projectRef}.supabase.co`
     if (url.username || url.password || url.search || url.hash || url.pathname !== '/' || !(environment === 'local' ? local : sandbox)) {
-      throw new Error('A URL do Supabase não corresponde ao ambiente/projeto de testes configurado.')
+      throw new Error('A URL do Supabase não corresponde ao ambiente/projeto configurado.')
     }
   }
   if (mode === 'sandbox' && (!supabaseUrl || !supabaseKey)) {
-    throw new Error('Configure URL e chave publicável do Supabase de testes para usar o modo sandbox.')
+    throw new Error('Configure URL e chave publicável do Supabase para usar o modo sandbox.')
   }
   return { mode, environment, supabaseUrl, supabaseKey, projectRef }
 }

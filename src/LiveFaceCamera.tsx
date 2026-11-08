@@ -23,7 +23,7 @@ export function LiveFaceCamera({ onCapture, onClose }: Props) {
 
     async function start() {
       try {
-        if (!navigator.mediaDevices?.getUserMedia) throw new Error('A câmera não está disponível neste navegador. Use a opção de escolher foto.')
+        if (!navigator.mediaDevices?.getUserMedia) throw new Error('A câmera não está disponível neste navegador. Use um aparelho com câmera.')
         stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } })
         if (!active) { stream.getTracks().forEach(track => track.stop()); return }
         const video = videoRef.current
@@ -48,7 +48,7 @@ export function LiveFaceCamera({ onCapture, onClose }: Props) {
               setCount(previous => previous === next ? previous : next)
             } catch {
               if (!active) return
-              setError('Não foi possível analisar a imagem da câmera. Tente escolher uma foto.')
+              setError('Não foi possível analisar a imagem da câmera. Tente novamente.')
               setState('error')
               stream?.getTracks().forEach(track => track.stop())
               return
@@ -60,7 +60,7 @@ export function LiveFaceCamera({ onCapture, onClose }: Props) {
       } catch (cause) {
         if (!active) return
         const permissionDenied = cause instanceof DOMException && (cause.name === 'NotAllowedError' || cause.name === 'PermissionDeniedError')
-        setError(permissionDenied ? 'Acesso à câmera negado. Autorize nas configurações do navegador ou escolha uma foto.' : cause instanceof Error ? cause.message : 'Não foi possível abrir a câmera. Escolha uma foto.')
+        setError(permissionDenied ? 'Acesso à câmera negado. Autorize nas configurações do navegador e tente novamente.' : cause instanceof Error ? cause.message : 'Não foi possível abrir a câmera. Tente novamente.')
         setState('error')
         stream?.getTracks().forEach(track => track.stop())
       }
@@ -92,7 +92,7 @@ export function LiveFaceCamera({ onCapture, onClose }: Props) {
     }, 'image/jpeg', 0.85)
   }
 
-  const message = state === 'starting' ? 'Abrindo câmera e preparando detecção...' : count === 1 ? 'Um rosto detectado. Você pode tirar a foto.' : count > 1 ? 'Mais de um rosto detectado. Fique sozinha na imagem.' : 'Posicione seu rosto de frente, em um local bem iluminado.'
+  const message = state === 'starting' ? 'Abrindo câmera e preparando detecção...' : count === 1 ? 'Um rosto detectado. Você pode tirar a foto.' : count > 1 ? 'Mais de um rosto detectado. Fique sozinha na imagem.' : 'Posicione seu rosto de frente, em um local bem iluminado, e mantenha a imagem nítida.'
   return <div className="live-camera">
     <div className="live-camera-head"><b>Câmera frontal</b><button type="button" onClick={onClose} aria-label="Fechar câmera"><X size={20} /></button></div>
     <div className="live-camera-preview"><video ref={videoRef} autoPlay muted playsInline aria-label="Prévia da câmera frontal" /><span className={`live-camera-guide ${state === 'ready' && count === 1 ? 'detected' : ''}`} aria-hidden="true" /></div>

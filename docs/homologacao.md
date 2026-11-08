@@ -76,9 +76,9 @@ Sessões da equipe têm limite servidor de 8h e inatividade de 30min. O código 
 
 O cadastro confirma primeiro o e-mail e depois o celular na mesma identidade Auth. O banco impede conclusão sem os dois contatos verificados, maioridade, CPF válido/único e aceite das três versões disponíveis. Dados de CPF e nascimento não são salvos em rascunhos do navegador.
 
-A foto é recortada em 600×600 no navegador e novamente decodificada, validada pelo modelo local de detecção de rosto e reencodificada em JPEG sem metadados no servidor. Falha ou HEIC sem suporte exige nova imagem. O bucket é privado; URLs de leitura duram 60s. A detecção não comprova identidade ou vivacidade.
+A foto é capturada ao vivo pela câmera, recortada em 600×600 no navegador e novamente decodificada, validada pelo modelo local de detecção de rosto e reencodificada em JPEG sem metadados no servidor. Falha exige nova captura pela câmera. O bucket é privado; URLs de leitura duram 60s. A detecção não comprova identidade ou vivacidade.
 
-O cadastro fica `incomplete` até confirmação do provedor. Para habilitar Stripe, preencher no arquivo **ignorado** `.env.test`:
+O cadastro fica `incomplete` até confirmação do provedor. Após salvar a foto, a interface abre a etapa de pagamento e, com Stripe configurado, redireciona ao Checkout. Se o provedor estiver indisponível, mostra erro e permite tentar novamente; o retorno do Checkout não ativa o benefício. Para habilitar Stripe, preencher no arquivo **ignorado** `.env.test`:
 
 - `APP_ENV=local`, `APP_ORIGIN=http://127.0.0.1:5174`.
 - `STRIPE_SECRET_KEY`: preferir chave restrita de teste com permissões necessárias.
@@ -193,6 +193,14 @@ O histórico offline preserva páginas consultadas antes, sem expiração nova. 
 A migração `20261021180000_cursor_pagination.sql` foi aplicada apenas localmente. SQL verificou limites, busca literal, isolamento, empates de data, inserções durante navegação e totais exatos com estorno. O frontend conectado não usa os antigos endpoints de listas completas; sua compatibilidade ficou limitada a 100 registros.
 
 Validação: **37 testes automatizados** e **155 verificações pgTAP**, lint SQL, typecheck, build sandbox, balcão e teste móvel de paginação aprovados. A [medição reproduzível](desempenho.md) executou 200 consultas paginadas e 50 compras distintas concorrentes com 2.000 associados/10.060 compras de fixture: p95 de páginas 117,15 ms, consulta 127,82 ms e commit 173,25 ms. Fixtures geradas foram removidas. Não houve reset do seed, cobrança externa ou mensagem real. Validar latência/rede/carga no ambiente hospedado continua pendente.
+
+## Suporte, visão geral e seções do associado — 08/11/2026
+
+A migração `20261108210000_support_overview.sql` adiciona solicitações de suporte e resumos agregados. Mensagens são gravadas em `private.support_requests` com RLS e sem leitura direta pelo navegador; abertura, listagem e resposta passam por RPCs autenticadas. Somente `admin` e `support` listam/respondem; a diretoria (`viewer`) lê apenas os agregados de `rk_admin_overview`, e o associado usa `rk_member_economy` e vê o próprio e-mail verificado e telefone mascarado em `rk_context`. A abertura é limitada a cinco mensagens por ator a cada hora.
+
+A área conectada do associado agora oferece **Início** (cartão/QR), **Parceiros** (rede e mapa), **Economia** (totais, histórico paginado) e **Conta** (contatos verificados, assinatura e formulário de ajuda). A administração abre em **Visão geral**, com indicadores, últimas compras e assinaturas que exigem atenção, e inclui a aba **Suporte** para responder mensagens. A diretoria não vê contatos nem ações de suporte.
+
+Validação local: **58 testes Node**, **235 verificações pgTAP** em nove arquivos, typecheck, build sandbox, `test:connected:ui` com Auth/RPC/Storage reais, `test:e2e` e `test:mobile` aprovados. O teste conectado cobriu navegação pelas quatro seções do associado, e-mail verificado, formulário de ajuda e visão geral somente leitura. Nenhum pagamento Stripe, mensagem externa ou deploy hospedado foi executado; a nova migração ainda precisa ser aplicada ao projeto hospedado.
 
 ## Pendências para homologação completa
 

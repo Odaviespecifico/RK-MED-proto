@@ -37,7 +37,8 @@ try {
   assert.equal(await page.locator('body').evaluate(el => el.scrollWidth > innerWidth), false)
   await signout()
   await login('diretoria@rkmed.test')
-  await page.getByRole('heading', { name: 'Associados', exact: true }).waitFor()
+  await page.getByRole('heading', { name: 'Visão geral', exact: true }).waitFor()
+  await page.getByText('ASSOCIADOS ATIVOS', { exact: true }).waitFor()
   assert.equal(await page.getByText('ana@rkmed.test', { exact: true }).count(), 0)
   assert.equal(await page.getByRole('button', { name: 'Bloquear', exact: true }).count(), 0)
   await page.getByRole('button', { name: 'Abrir navegação' }).click()
@@ -46,6 +47,16 @@ try {
   assert.equal(await page.getByRole('button', { name: 'Estornar', exact: true }).count(), 0)
   await signout()
   await login('ana@rkmed.test') // Synthetic fixture password through real local Auth; member product login remains OTP.
+  await page.getByRole('img', { name: 'QR do cartão do associado' }).waitFor()
+  for (const [label, heading] of [['Parceiros', 'Parceiros'], ['Economia', 'Minha economia'], ['Conta', 'Minha conta']]) {
+    await page.getByRole('button', { name: 'Abrir navegação' }).click()
+    await page.getByRole('dialog', { name: 'Navegação do painel' }).getByRole('button', { name: label, exact: true }).click()
+    await page.getByRole('heading', { name: heading, exact: true }).waitFor()
+  }
+  await page.getByText('ana@rkmed.test', { exact: true }).waitFor()
+  await page.getByText('Sua mensagem', { exact: true }).waitFor()
+  await page.getByRole('button', { name: 'Abrir navegação' }).click()
+  await page.getByRole('dialog', { name: 'Navegação do painel' }).getByRole('button', { name: 'Início', exact: true }).click()
   await page.getByRole('img', { name: 'QR do cartão do associado' }).waitFor()
   await page.screenshot({ path: '/tmp/rkmed-connected-member.png', fullPage: true })
   assert.equal(await page.locator('body').evaluate(el => el.scrollWidth > innerWidth), false)

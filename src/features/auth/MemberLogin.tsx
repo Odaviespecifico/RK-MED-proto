@@ -46,7 +46,7 @@ export function MemberLogin({ auth, onAuthenticated, go, online, demo = false, d
       setCooldown(demo ? 0 : 60)
       setSentBy(channel)
       setOtp('')
-      setNotice(`Novo código enviado por ${channel === 'sms' ? 'SMS' : 'e-mail'}${demo ? ' (simulado)' : ''}.`)
+      setNotice(`Novo código enviado por ${channel === 'sms' ? 'SMS' : 'e-mail'}.`)
     } catch (error) { setError(error instanceof Error ? error.message : 'Não foi possível reenviar o código.') }
     finally { setBusy(false) }
   }

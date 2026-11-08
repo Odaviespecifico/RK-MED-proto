@@ -5,8 +5,19 @@ import { watchOperations, type OperationalSummary, type OperationalConnection } 
 import type { CursorPage, PageCursor } from '../lib/pagination'
 
 export class PortalConnectionError extends Error {}
-export type PortalMember = { id: string; name: string; cpf: string; photoPath: string | null; cardToken: string; eligible: boolean; blocked: boolean; paidThrough: string | null; billingState: string; cancelAtPeriodEnd: boolean; joinedAt: string }
+export type PortalMember = { id: string; name: string; cpf: string; photoPath: string | null; cardToken: string; eligible: boolean; blocked: boolean; paidThrough: string | null; billingState: string; cancelAtPeriodEnd: boolean; joinedAt: string; email?: string | null; phone?: string | null }
 export type PortalContext = { userId: string; role: 'pending' | 'member' | 'partner' | 'admin' | 'support' | 'viewer'; partnerId?: string; member?: PortalMember; workSession?: { employeeId: string; employeeName: string; partnerId: string } }
+export type SupportRequest = { id: string; memberId: string; memberName: string; message: string; status: 'open' | 'answered' | 'closed'; response: string | null; createdAt: string; answeredAt: string | null }
+export type AdminOverview = {
+  activeMembers: number
+  purchases: number
+  savingsCents: string
+  pastDue: number
+  openSupport: number
+  recentPurchases: { id: string; memberName: string; partnerName: string; grossCents: number; createdAt: string }[]
+  attentionMembers: { id: string; name: string; billingState: string; paidThrough: string | null }[]
+}
+export type MemberEconomy = { savingsCents: string; purchases: number; partners: number }
 export type PortalPurchase = { id: string; memberId: string; memberName: string; partnerId: string; partnerName: string; employee: string; grossCents: number; discountCents: number; finalCents: number; createdAt: string; reversedAt: string | null }
 export type AdminMember = Pick<PortalMember, 'id' | 'name' | 'cpf' | 'eligible' | 'blocked' | 'billingState' | 'paidThrough' | 'joinedAt'> & { email: string | null; phone: string | null; invoiceId: string | null; amountDue: number | null; savingsCents: string }
 export type PortalEmployee = { id: string; name: string; partnerId: string; active: boolean }
@@ -26,6 +37,11 @@ export function portal(client: SupabaseClient) {
     operationalSummary: () => rpc<OperationalSummary>('rk_operational_summary'),
     watchOperations: (changed: () => void, state: (value: OperationalConnection) => void) => watchOperations(client, changed, state),
     staffPartners: () => rpc<(PublicPartner & { active: boolean })[]>('rk_staff_partners'),
+    adminOverview: () => rpc<AdminOverview>('rk_admin_overview'),
+    supportPage: (cursor: PageCursor | null = null, status = '') => rpc<CursorPage<SupportRequest>>('rk_support_requests', { p_at: cursor?.at || null, p_id: cursor?.id || null, p_status: status }),
+    answerSupport: (id: string, response: string) => rpc<void>('rk_answer_support_request', { p_id: id, p_response: response }),
+    openSupport: (message: string) => rpc<string>('rk_open_support_request', { p_message: message }),
+    memberEconomy: () => rpc<MemberEconomy>('rk_member_economy'),
     report: (filter: ReportFilter) => rpc<PurchaseReport>('rk_report', { p_from: filter.from, p_to: filter.to, p_partner: filter.partnerId }),
     exportPurchases: (filter: ReportFilter) => rpc<PurchaseExport>('rk_export_purchases', { p_from: filter.from, p_to: filter.to, p_partner: filter.partnerId }),
     partners: () => rpc<PublicPartner[]>('rk_partners'),
@@ -55,7 +71,7 @@ export function portal(client: SupabaseClient) {
       if (error || data?.error) {
         let message = data?.error
         if (!message && error && 'context' in error && error.context instanceof Response) { try { message = (await error.context.json()).error } catch {} }
-        throw new Error(typeof message === 'string' && message.length < 200 ? message : 'Integração indisponível. Confira a configuração do ambiente de testes.')
+        throw new Error(typeof message === 'string' && message.length < 200 ? message : 'Integração indisponível. Confira a configuração do ambiente.')
       }
       return data as T
     },

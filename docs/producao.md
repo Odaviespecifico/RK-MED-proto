@@ -275,6 +275,8 @@ Somente executar após o backend e a homologação estarem prontos. O deploy do 
 
    O `vercel.json` da raiz foi ajustado para essa estrutura. Esta configuração publica o frontend; ela não publica banco, funções ou integrações. [Vite na Vercel](https://vercel.com/docs/frameworks/frontend/vite).
 
+   > **Erro `STATIC_BUILD_NO_OUT_DIR` ("No Output Directory named `dist` found"):** acontece quando o projeto na Vercel ainda aponta para a estrutura antiga. Se **Settings → Build and Development Settings → Root Directory** estiver como `prototype`, o build roda na raiz do repositório, mas a saída é procurada em `prototype/dist`; como o `vercel.json` da raiz fica fora do diretório raiz configurado, o painel também ignora essas opções. Corrija o **Root Directory** para a raiz do repositório (`.` ou vazio), salve e faça um novo deploy. O build em si já termina com sucesso antes desse erro.
+
 5. Apontar o domínio pelo DNS e confirmar HTTPS. Configurar a URL oficial e redirects autorizados no Supabase Auth, URLs de retorno do pagamento e endpoint real do webhook. Não autorizar previews genéricos no Auth de produção.
 6. Publicar a versão validada com os parâmetros de produção. Variáveis `VITE_*` são incorporadas ao build; alterações exigem novo build/deploy.
 7. Substituir todos os nomes, fotos, contatos, endereços, parceiros e textos fictícios por conteúdo autorizado. Se usar o mapa incorporado, restringir a chave pública à API e aos domínios permitidos; sem chave, o protótipo já oferece link externo.

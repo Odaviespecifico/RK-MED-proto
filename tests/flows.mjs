@@ -4,6 +4,22 @@ import { chromium } from 'playwright-core'
 const origin = process.env.RKMED_TEST_URL ?? 'http://127.0.0.1:5173'
 const browser = await chromium.launch({ executablePath: '/usr/bin/brave-browser', headless: true, args: ['--no-sandbox', '--disable-gpu'] })
 const context = await browser.newContext({ viewport: { width: 390, height: 844 } })
+await context.addInitScript(() => {
+  navigator.mediaDevices.getUserMedia = async () => {
+    const image = new Image()
+    image.src = '/demo-ana.webp'
+    await image.decode()
+    const canvas = document.createElement('canvas')
+    canvas.width = image.naturalWidth
+    canvas.height = image.naturalHeight
+    const draw = () => canvas.getContext('2d')?.drawImage(image, 0, 0)
+    draw()
+    const timer = window.setInterval(draw, 100)
+    const stream = canvas.captureStream(15)
+    stream.getTracks().forEach(track => track.addEventListener('ended', () => window.clearInterval(timer)))
+    return stream
+  }
+})
 const page = await context.newPage()
 
 try {
@@ -69,29 +85,19 @@ try {
   await page.getByRole('button', { name: 'Continuar' }).click()
   await page.getByLabel('Código enviado por e-mail').fill('123456')
   await page.getByRole('button', { name: 'Confirmar e-mail' }).click()
-  await page.getByRole('button', { name: 'Escolher foto' }).click()
-  const offCropImage = await page.evaluate(async () => {
-    const portrait = new Image()
-    portrait.src = '/demo-ana.webp'
-    await portrait.decode()
-    const canvas = document.createElement('canvas')
-    canvas.width = 1800
-    canvas.height = 600
-    const context = canvas.getContext('2d')
-    context.fillStyle = '#ffffff'
-    context.fillRect(0, 0, canvas.width, canvas.height)
-    context.drawImage(portrait, 0, 0, 500, 600)
-    return canvas.toDataURL('image/png').split(',')[1]
-  })
-  await page.locator('input[type=file]').setInputFiles({ name: 'rosto-fora-do-recorte.png', mimeType: 'image/png', buffer: Buffer.from(offCropImage, 'base64') })
-  await page.getByText('Não encontramos um rosto nítido', { exact: false }).waitFor({ timeout: 30000 })
-  await page.locator('input[type=file]').setInputFiles('tests/fixtures/face-portrait.jpg')
-  await page.getByText('Um rosto detectado', { exact: false }).waitFor({ timeout: 30000 })
+  await page.getByRole('button', { name: 'Tirar foto' }).waitFor({ state: 'visible' })
+  await page.getByText('Um rosto detectado. Você pode tirar a foto.').waitFor({ timeout: 30000 })
+  await page.getByRole('button', { name: 'Tirar foto' }).click()
+  await page.getByText('Um rosto detectado. A foto pode seguir para o cadastro.').waitFor({ timeout: 30000 })
+  assert.ok(await page.getByAltText('Prévia da sua foto').isVisible())
   await page.locator('input[type=checkbox]').check()
-  await page.getByRole('button', { name: 'Finalizar cadastro' }).click()
-  await page.getByText('Você chegou!').waitFor()
+  await page.getByRole('button', { name: 'Ir para o pagamento' }).click()
+  await page.getByRole('heading', { name: 'Pagamento da assinatura.' }).waitFor()
+  assert.ok(await page.getByText('R$ 69,60').first().isVisible())
+  await page.getByRole('button', { name: /Pagar R\$ 69,60/ }).click()
+  await page.getByText('Você chegou!').waitFor({ timeout: 10000 })
   assert.ok(await page.getByText('Você chegou!').isVisible())
-  console.log('PASS: email OTP, member QR, partner purchase, admin collection, facial detection, and dual-OTP enrollment.')
+  console.log('PASS: email OTP, member QR, partner purchase, admin collection, facial detection, dual-OTP enrollment, and post-enrollment payment.')
 } catch (error) {
   await page.screenshot({ path: '/tmp/rkmed-flow-failure.png', fullPage: true })
   throw error

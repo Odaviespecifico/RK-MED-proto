@@ -94,8 +94,9 @@ No Docker, telefones reservados no arquivo `supabase/config.toml` têm OTP `4829
 - [ ] **CAD-01 — E-mail:** iniciar `/cadastro` com um e-mail de teste ainda não utilizado, solicitar o código e confirmá-lo. Esperado: avanço para verificação do celular na mesma conta; ainda sem benefício ativo.
 - [ ] **CAD-02 — Celular:** solicitar o código pelo SMS e confirmar. Esperado: contato verificado vinculado à identidade anterior, sem segunda conta; não existe opção WhatsApp nem PIN.
 - [ ] **CAD-03 — Dados e aceites:** informar nome, CPF sintético válido e não utilizado, nascimento de adulto; ler Termos, Privacidade e Uso da foto e aceitar. Esperado: avanço para foto, com versões e aceite registrados no servidor.
-- [ ] **CAD-04 — Foto por arquivo:** usar `tests/fixtures/face-portrait.jpg` ou outro retrato autorizado de teste com um rosto. Salvar a foto. Esperado: prévia adequada, upload concluído e entrada na área do associado; assinatura permanece pendente até pagamento.
-- [ ] **CAD-05 — Foto pela câmera:** em nova conta, selecionar **Usar câmera**, permitir acesso, enquadrar um rosto e capturar. Esperado: captura habilitada quando o enquadramento é aceito e foto salva. A mensagem não deve afirmar comprovação de identidade ou vivacidade.
+- [ ] **CAD-04 — Somente câmera:** na etapa da foto, confirmar que não existe opção de escolher arquivo e que o aviso de nitidez é exibido. Esperado: a captura só é possível pela câmera ao vivo.
+- [ ] **CAD-05 — Foto pela câmera:** em nova conta, permitir o acesso quando a câmera abrir, enquadrar um rosto e capturar. Esperado: captura habilitada quando o enquadramento é aceito e foto salva. A mensagem não deve afirmar comprovação de identidade ou vivacidade.
+- [ ] **CAD-05A — Pagamento após o cadastro:** concluir a foto e confirmar que a etapa de pagamento aparece imediatamente, com a mensalidade de R$ 69,60. Esperado: o benefício continua indisponível até a confirmação do provedor; falha ao abrir o Checkout mostra erro e permite tentar novamente.
 
 ### Rejeições e interrupções
 
@@ -103,8 +104,8 @@ No Docker, telefones reservados no arquivo `supabase/config.toml` têm OTP `4829
 - [ ] **CAD-07 — Verificação incompleta:** confirmar somente o e-mail e tentar acessar `/app` ou concluir o cadastro. Repetir sem aceitar os documentos. Esperado: orientação para concluir as etapas; sem checkout/benefício por bypass.
 - [ ] **CAD-08 — OTP incorreto/expirado:** informar código incorreto e, com apoio técnico para aguardar a validade configurada, código expirado. Esperado: recusa; o sistema não considera o contato verificado.
 - [ ] **CAD-09 — Reenvio:** solicitar novo código antes e depois do intervalo indicado. Esperado: espera respeitada, mesmo canal de envio e confirmação possível com código válido. Solicitações repetidas devem ser limitadas pelo servidor.
-- [ ] **CAD-10 — Fotos inválidas:** tentar imagem sem rosto, dois rostos, arquivo que não é imagem e arquivo acima de 5 MiB. Esperado: rejeição ou orientação para tentar novamente; sem foto aprovada indevidamente. HEIC sem suporte deve apresentar alternativa clara.
-- [ ] **CAD-11 — Permissão da câmera:** negar acesso ou usar aparelho sem câmera disponível. Esperado: erro compreensível e possibilidade de escolher arquivo; a tela não trava.
+- [ ] **CAD-10 — Capturas inválidas:** tentar capturar sem rosto (o botão deve ficar indisponível), com dois rostos e com imagem desfocada. Esperado: rejeição ou orientação para tentar novamente; sem foto aprovada indevidamente.
+- [ ] **CAD-11 — Permissão da câmera:** negar acesso ou usar aparelho sem câmera disponível. Esperado: erro compreensível e possibilidade de tentar novamente após autorizar; a tela não trava.
 - [ ] **CAD-12 — Queda de rede e retomada:** desligar a conexão durante cadastro/upload e depois reconectar. Esperado: erro recuperável e nenhuma aprovação fictícia. Ao recarregar, pode ser necessário reinserir dados transitórios; CPF/nascimento não devem reaparecer a partir de rascunho persistente.
 
 ### Login e sessão
@@ -133,8 +134,8 @@ Configurar o segredo correspondente no backend e reiniciar as funções conforme
 
 Pré-condição: associado novo, com ambos os contatos, aceites e foto, sem bloqueio; assinatura incompleta.
 
-1. Entrar na área do associado e confirmar **Pagamento pendente** / benefício indisponível.
-2. Clicar **Concluir assinatura**.
+1. Concluir a foto no cadastro e confirmar que a etapa de pagamento é aberta com **Pagamento pendente** / benefício indisponível.
+2. Clicar **Pagar R$ 69,60**.
 3. No Checkout Stripe, conferir cobrança **mensal**, em **BRL**, de **R$ 69,60**, e a identificação do cliente de teste.
 4. Preencher o cartão de aprovação e concluir o pagamento.
 5. Retornar à aplicação; aguardar o processamento do webhook e atualizar/reabrir a área do associado.
@@ -169,8 +170,9 @@ Pré-condição: associado novo, com ambos os contatos, aceites e foto, sem bloq
 - [ ] **MEM-01 — Cartão:** conferir nome, CPF mascarado, QR e situação da assinatura. Esperado: dados da conta atual; QR permanece estável ao atualizar/reabrir, salvo revogação/reemissão autorizada.
 - [ ] **MEM-02 — Economia:** anotar saldo inicial, registrar uma compra no parceiro e atualizar a área do associado. Esperado: acréscimo exatamente igual ao desconto; histórico mostra parceiro, data e valores correspondentes.
 - [ ] **MEM-03 — Paginação:** preparar mais de 25 compras com o técnico; navegar por páginas e voltar. Esperado: registros corretos, sem repetição/perda indevida; economia acumulada representa o total, não apenas a página aberta.
-- [ ] **MEM-04 — Parceiros:** conferir rede, categorias, endereços e descontos na área do associado contra o cadastro ativo da administração.
-- [ ] **MEM-05 — Cobrança e ajuda:** conferir mensalidade, período pago e bloqueios; testar os controles de pagamento disponíveis. Se a versão conectada não oferecer contato/fluxo de suporte exigido pelo escopo, registrar a lacuna, sem considerar uma mensagem simulada da interface local como atendimento entregue.
+- [ ] **MEM-04 — Parceiros:** abrir **Parceiros**, conferir rede, categorias, endereços, descontos e o mapa da rede contra o cadastro ativo da administração.
+- [ ] **MEM-05 — Cobrança e ajuda:** conferir mensalidade, período pago e bloqueios; testar os controles de pagamento disponíveis. Em **Conta**, enviar uma mensagem pelo formulário de ajuda e confirmar que ela aparece para admin/suporte; a resposta registrada pela equipe fica vinculada à solicitação. O envio exige conexão e não é enfileirado offline.
+- [ ] **MEM-06 — Seções do associado:** navegar por **Início**, **Parceiros**, **Economia** e **Conta** em celular. Esperado: cartão/QR na entrada, rede e mapa em Parceiros, totais e histórico em Economia, e e-mail/telefone verificados com CPF mascarado e assinatura em Conta. Nenhuma seção deve permitir alterar a assinatura sem passar pelo fluxo de pagamento.
 
 ## 7. Balcão e compra — RF-PP, RN-12–20, D10, D13, D18
 
@@ -201,6 +203,8 @@ Pré-condição: associado novo, com ambos os contatos, aceites e foto, sem bloq
 - [ ] **ADM-09 — Suporte:** repetir bloqueio, estorno e cobrança como suporte. Esperado: operações autorizadas; criação de acessos administrativos indisponível e recusada pelo servidor.
 - [ ] **ADM-10 — Diretoria:** entrar como diretoria e percorrer consultas/relatórios. Esperado: CPF mascarado; sem contatos/fotos dos associados, bloqueios, estornos, cobranças operacionais, criação de acessos e exportação. A restrição deve existir também nas respostas do servidor, a verificar na seção técnica.
 - [ ] **ADM-11 — Sessão de equipe:** deixar conta da equipe inativa por 30 minutos e, em rodada controlada, testar limite total de 8 horas com auxílio técnico. Esperado: operações recusadas após expiração; atualização automática de alertas não renova atividade. Não aplicar esses prazos ao associado.
+- [ ] **ADM-12 — Visão geral:** entrar como admin/suporte e abrir `/admin`. Esperado: indicadores de associados ativos, compras, economia gerada e atenção necessária; últimas compras e assinaturas pendentes. A diretoria vê os mesmos agregados, sem contatos, fotos ou ações. Os valores devem refletir o banco, não apenas a página carregada.
+- [ ] **ADM-13 — Suporte:** enviar uma mensagem como associado e abrir **Suporte** como admin/suporte. Esperado: mensagem listada com nome, data e texto; filtro por situação; resposta registrada e status alterado. A diretoria recebe recusa também na chamada direta ao servidor, e o associado não acessa a lista nem responde solicitações.
 
 ## 9. Cobranças, comunicações e alertas — RF-NOT, D08, D17
 
