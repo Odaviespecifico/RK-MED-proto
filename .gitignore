@@ -6,12 +6,8 @@ playwright-report/
 test-results/
 .env
 .env.*
-!.env.example
-!.env.stripe.example
-!.env.sandbox
 .local/
 supabase/.temp/
 supabase/.branches/
-supabase/functions/.env
 *.log
 *.tsbuildinfo

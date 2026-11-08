@@ -1,4 +1,12 @@
+> **OTP atual:** códigos de SMS/e-mail são gerados e validados pela RKMED. SMS Dev é somente transporte. Configuração e limites: [integração SMS Dev](smsdev-otp.md). A configuração de SMS nativo mencionada abaixo foi substituída por D29.
+
+# Decisão vigente: OTP de telefone por SMS
+
+A decisão atual substitui WhatsApp por SMS. Login oferece SMS ou e-mail; primeiro cadastro verifica ambos. O envio usa o provedor nativo configurado no Supabase Auth, com `SMS_MODE=supabase-native` e `SMS_ALLOWED_TEST_NUMBERS` no gateway. Desativar o hook Send SMS legado antes de habilitar o provedor nativo. Credenciais e entrega externa ainda precisam de configuração/aceite; referências a WhatsApp abaixo são históricas.
+
 # RKMED — ambiente funcional de testes
+
+**Decisão atual — 04/11/2026:** a API oficial do WhatsApp da Meta substitui o Twilio (D26 em [plan.md](../plan.md)). A migração do código de entrega ainda está pendente; referências ao transporte Twilio abaixo descrevem o legado e não devem ser usadas para configurar novos envios. A alternativa por SMS foi removida por decisão do usuário em 04/11/2026; códigos de telefone serão entregues apenas pelo WhatsApp. Supabase Auth e Resend permanecem.
 
 O fluxo prioritário usa Supabase Auth, PostgreSQL e Storage locais reais: funcionário → cartão/CPF → foto privada → desconto calculado no banco → compra → histórico → estorno. As contas abaixo são sintéticas; o status pago da Ana é uma fixture SQL, não um pagamento Stripe.
 
@@ -23,7 +31,7 @@ npm run functions:serve
 
 Abrir http://127.0.0.1:5174. Studio: http://127.0.0.1:54323. Caixa de e-mail local: http://127.0.0.1:54324. As Edge Functions escutam em `http://127.0.0.1:54321/functions/v1/`.
 
-`local:prepare` confere o destino loopback, grava somente configuração pública em `.env.local`, preserva outras opções e carrega fotos sintéticas no bucket privado. Não imprime a chave administrativa. `functions:serve` usa `supabase/functions/.env`, ignorado pelo Git; as chaves internas do Supabase são fornecidas pelo runtime local. Não adicionar nenhum segredo a `VITE_*`.
+`local:prepare` confere o destino loopback, grava somente configuração pública em `.env.test`, preserva outras opções e carrega fotos sintéticas no bucket privado. Não imprime a chave administrativa. `functions:serve` usa `.env.test`, ignorado pelo Git; as chaves internas do Supabase são fornecidas pelo runtime local. Não adicionar nenhum segredo a `VITE_*`.
 
 Para recriar **somente** o banco Docker local, apagando dados sintéticos:
 
@@ -70,7 +78,7 @@ O cadastro confirma primeiro o e-mail e depois o celular na mesma identidade Aut
 
 A foto é recortada em 600×600 no navegador e novamente decodificada, validada pelo modelo local de detecção de rosto e reencodificada em JPEG sem metadados no servidor. Falha ou HEIC sem suporte exige nova imagem. O bucket é privado; URLs de leitura duram 60s. A detecção não comprova identidade ou vivacidade.
 
-O cadastro fica `incomplete` até confirmação do provedor. Para habilitar Stripe, preencher no arquivo **ignorado** `supabase/functions/.env`:
+O cadastro fica `incomplete` até confirmação do provedor. Para habilitar Stripe, preencher no arquivo **ignorado** `.env.test`:
 
 - `APP_ENV=local`, `APP_ORIGIN=http://127.0.0.1:5174`.
 - `STRIPE_SECRET_KEY`: preferir chave restrita de teste com permissões necessárias.
@@ -78,7 +86,7 @@ O cadastro fica `incomplete` até confirmação do provedor. Para habilitar Stri
 - `STRIPE_WEBHOOK_SECRET`: segredo do encaminhamento/endpoint de testes.
 - `STRIPE_PORTAL_CONFIGURATION_ID`: plano fixo, sem troca de assinatura; cancelamento permitido somente no fim do período.
 
-As ferramentas [Stripe de teste](stripe-testes.md) continuam disponíveis para preparar catálogo e objetos sintéticos, mediante configuração local. O `.env.stripe.local` dessas ferramentas não é lido automaticamente pelas Edge Functions.
+As ferramentas [Stripe de teste](stripe-testes.md) usam o mesmo `.env.test` da raiz que `functions:serve`. O receptor independente pode usar `STRIPE_CLI_WEBHOOK_SECRET` quando seu listener tiver segredo diferente do webhook das Edge Functions.
 
 Encaminhar eventos Stripe **à Edge Function**, não ao receptor independente de demonstração:
 
@@ -96,14 +104,14 @@ Stripe Tax não foi habilitado. Antes de produção, validar a configuração fi
 
 ## Twilio, Resend e jobs
 
-Os transportes ficam desabilitados por padrão. Para testar envio externo, usar somente destinatários de teste autorizados e preencher `supabase/functions/.env`:
+Os transportes ficam desabilitados por padrão. Para testar envio externo, usar somente destinatários de teste autorizados e preencher `.env.test`:
 
-- Twilio: `TWILIO_MODE=whatsapp-sandbox`, SID/token, remetente oficial `whatsapp:+14155238886`, `TWILIO_ALLOWED_TEST_NUMBERS` e remetente SMS autorizado `TWILIO_SMS_FROM`. Cada número precisa aderir ao WhatsApp Sandbox. Credenciais de teste da API Twilio não equivalem ao WhatsApp Sandbox; envios podem ter custo.
+- Twilio: `TWILIO_MODE=whatsapp-sandbox`, SID/token, remetente oficial `whatsapp:+14155238886`, `TWILIO_ALLOWED_TEST_NUMBERS`. Cada número precisa aderir ao WhatsApp Sandbox. Credenciais de teste da API Twilio não equivalem ao WhatsApp Sandbox; envios podem ter custo.
 - Resend: `RESEND_MODE=transactional-sandbox`, `RESEND_API_KEY`, `RESEND_FROM`, `RESEND_ALLOWED_TEST_EMAILS` e `OPERATIONS_TEST_EMAIL`. O remetente precisa estar autorizado no provedor.
 - Auth: configurar os hooks HTTP Send SMS → `auth-sms` e Send Email → `auth-email`, com os respectivos segredos `AUTH_SMS_HOOK_SECRET`/`AUTH_EMAIL_HOOK_SECRET`. A configuração padrão local mantém Mailpit e OTPs sintéticos, sem hooks externos. Nunca habilitar hooks com segredos vazios.
 - Jobs: `JOBS_SECRET`, aleatório com pelo menos 32 caracteres, mantido exclusivamente no backend. Agendar POST em `provider-jobs` com esse bearer, por exemplo a cada cinco minutos no sandbox. Nenhum cron remoto foi criado.
 
-Com `VITE_APP_ENV=sandbox`, telefone passa por `phone-code`: valida origem, allowlist e limite por número, registra o canal no servidor e pede ao Supabase para emitir o desafio. O hook assinado consome uma única intenção; não confia em metadados do usuário. A alternativa por SMS solicita um novo desafio com o canal explícito e respeita os limites do Auth. Ambos os canais podem falhar; a interface não libera cadastro por entrega simulada.
+Com `VITE_APP_ENV=sandbox`, telefone passa por `phone-code`: valida origem, allowlist e limite por número, registra o canal no servidor e pede ao Supabase para emitir o desafio. O hook assinado consome uma única intenção; não confia em metadados do usuário. SMS é recusado pelo gateway e pelo banco. O reenvio mantém o WhatsApp e respeita os limites do Auth. O envio pode falhar; a interface não libera cadastro por entrega simulada.
 
 `provider-jobs` reprocessa eventos pendentes, reconcilia clientes e envia a outbox com reserva por trabalhador, chave idempotente no Resend e backoff limitado. A fila interna mostra pendências e alertas. Aceitação pela API de mensagens ainda não comprova entrega; testar entrega e falha real nos provedores antes de concluir homologação.
 
@@ -144,7 +152,7 @@ Os testes `connected` exigem Docker/stack local e fotos preparadas. UI usa 5174;
 - Endpoints recusam chamadas sem usuário, perfil de consulta em ações privilegiadas e webhook sem configuração válida.
 - PWA compilada: snapshot sem CPF integral, reinício offline, ações desabilitadas, limpeza no logout e isolamento entre associados aprovados. Falha de transporte pode abrir a cópia salva; respostas de permissão negada não são tratadas como offline.
 
-Reenvio de OTP e alternativa SMS estão disponíveis no cadastro com espera de 60 segundos. A entrega externa ainda precisa ser homologada; os testes locais não comprovam chegada da mensagem.
+Reenvio de OTP pelo mesmo canal está disponível no cadastro com espera de 60 segundos; SMS foi removido. A entrega externa ainda precisa ser homologada; os testes locais não comprovam chegada da mensagem.
 
 ## Relatórios e CSV — verificados em 21/10/2026
 
@@ -187,6 +195,18 @@ A migração `20261021180000_cursor_pagination.sql` foi aplicada apenas localmen
 Validação: **37 testes automatizados** e **155 verificações pgTAP**, lint SQL, typecheck, build sandbox, balcão e teste móvel de paginação aprovados. A [medição reproduzível](desempenho.md) executou 200 consultas paginadas e 50 compras distintas concorrentes com 2.000 associados/10.060 compras de fixture: p95 de páginas 117,15 ms, consulta 127,82 ms e commit 173,25 ms. Fixtures geradas foram removidas. Não houve reset do seed, cobrança externa ou mensagem real. Validar latência/rede/carga no ambiente hospedado continua pendente.
 
 ## Pendências para homologação completa
+
+SMS removido em 04/11/2026 (D26): cadastro/login e reenvios oferecem somente WhatsApp ou e-mail, e códigos de telefone ficam no WhatsApp. Pedidos pelo canal `sms` são recusados pelo adaptador, gateway e banco; o transporte SMS e sua variável de remetente foram removidos. Os nomes `auth-sms`, `AUTH_SMS_HOOK_SECRET`, `sms.otp`, `auth.sms` e `verifyOtp(type: 'sms')` pertencem ao protocolo de OTP de telefone do Supabase e não representam uma alternativa de entrega por SMS. A migration `20261104190000_whatsapp_only_delivery.sql` foi aplicada somente localmente. Verificados: 39 testes Node, 158 verificações SQL, lint SQL, typecheck, builds demo/sandbox, jornada de navegador com reenvio pelos canais existentes e recusa HTTP direta de SMS pela Edge Function. Nenhuma mensagem externa ou publicação foi executada; a migração de WhatsApp para Meta permanece pendente.
+
+Correção de câmera/foto em 04/11/2026: o erro `activeTexture` foi reproduzido com contextos WebGL indisponíveis e corrigido com processamento alternativo por CPU. Os arquivos WASM do MediaPipe são agora vinculados à versão instalada. Foto, quadro de vídeo e rejeição de imagem sem rosto foram verificados com e sem WebGL; captura completa também passou na versão compilada. Câmera simulada não substitui o aceite em aparelhos físicos. Para repetir no servidor de desenvolvimento em 5173:
+
+```bash
+node tests/face-browser.mjs
+RKMED_NO_WEBGL=1 node tests/face-browser.mjs
+RKMED_NO_WEBGL=1 node tests/live-camera.mjs
+```
+
+Para a jornada compilada, executar `npm run build`, servir `dist` com preview em 4173 e usar `RKMED_TEST_URL=http://127.0.0.1:4173 node tests/live-camera.mjs`, também com `RKMED_NO_WEBGL=1`. O teste direto `face-browser.mjs` importa o módulo de desenvolvimento e não deve ser apontado ao preview.
 
 - [ ] Inserir credenciais autorizadas e configurar hooks, webhook, portal, recuperação D+0/1/3 e agendamento no sandbox.
 - [ ] Rodar aquisição, falha, recuperação, cancelamento, disputa/reembolso e comunicação real nas contas de teste; verificar permissões da chave restrita.

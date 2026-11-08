@@ -22,8 +22,8 @@ button:active:not(:disabled), .button:active:not(:disabled) { transform: transla
 ::selection { background: #e2d1ab; color: #292824; }
 
 /* Shared controls and brand */
-.prototype-ribbon { background: #292824; color: #efe8da; letter-spacing: .035em; font-weight: 600; }
-.ribbon-dot { background: #d3b376; }
+
+
 .brand { color: #292824; letter-spacing: -.07em; }
 .brand-symbol { border-color: #9a7645; color: #9a7645; border-radius: 5px; }
 .brand small { color: #80613b; }

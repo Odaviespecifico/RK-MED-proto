@@ -21,14 +21,14 @@ The application lives at the repository root (`src/`, `public/`, Vite config and
 ## Business invariants
 
 - First delivery priority is scanning the member QR and registering a purchase. Prove this with synthetic paid-member fixtures before integrating full enrollment/billing.
-- Facial processing detects presence of a face only. Stripe is confirmed; Z-API is removed, Twilio handles WhatsApp/SMS verification; Resend delivers verification and transactional emails.
+- Facial processing detects presence of a face only. Stripe is confirmed; RKMED owns OTP generation and verification for both email and SMS; SMS Dev transports SMS only (D29). Supabase Auth remains the session store through an isolated server-side session bridge. Resend delivers verification and transactional emails. Existing Twilio code is legacy awaiting migration, not an approved delivery path; see D26 in `plan.md`.
 - Legal text is unapproved. Use `docs/legal-mocks/` only in tests with the exact visible AI warning; production must reject mock document versions.
 
 - Confirmed price: R$69.60/month (6960 cents). Payment failure immediately removes benefits; retries occur on D+0, D+1 and D+3. The seller must see ineligibility.
 - Shared partner account plus employee code is confirmed. Directors see name, masked CPF, membership status/dates and savings, without contacts, photos, exports or mutations. Admins and RK support manage operational actions; only admins provision staff.
 - Admins/RK support reverse records from the admin panel without a time limit, retaining reasons and audit. Pilot size/date are not planning blockers per the user.
 
-- RKMED records partner discounts; customers pay partners directly. No split payments, commissions, medical records, diagnoses, or exam categories.
+- RKMED records partner discounts; customers pay partners directly. Partner purchases have no splits or commissions. Membership revenue sharing follows D27 in `plan.md`; medical records, diagnoses and exam categories remain outside scope.
 - Adult individual membership only. Family plans, native apps, pharmacy, referrals, physical cards, ERP, chatbots, and browser push remain outside the baseline MVP.
 - Monetary values use integer BRL cents; discounts use integer basis points. Compute totals on the server and snapshot the applied rate on each transaction. Round half-cent upward. Use the explicit partner rate and enforce safe-integer technical bounds; no commercial purchase cap is approved.
 - Membership entitlement is checked on the server at validation **and transaction commit**, including administrative blocks and paid-through cancellation dates.
@@ -47,7 +47,8 @@ The application lives at the repository root (`src/`, `public/`, Vite config and
 - Roles and partner assignments must be server-controlled. Never trust editable user metadata, request-supplied roles, or a partner ID without verifying membership.
 - Mandatory MFA was declined. Protect staff operations with verified Supabase sessions, server-owned permissions, rate limits and audit. Existing admins provision staff using email/password for this version; never allow public self-assignment of staff privileges.
 - Do not expose service-role/secret keys, Stripe secrets, webhook secrets, or messaging credentials through `VITE_*`, browser bundles, logs, or git. Browser Supabase access, if adopted, uses only a publishable/anon key with tested RLS.
-- First registration requires both email OTP and phone OTP (WhatsApp via Twilio, SMS fallback). Subsequent logins offer exactly “Login com whatsapp” and “Login com email”, requiring only the chosen channel’s OTP. SMS is a fallback within the WhatsApp flow, not a third primary login option. Keep both verified contacts on the same member/Auth identity. Z-API is explicitly excluded. Do not implement the source six-digit PIN or PIN reset/fallback. Keep OTP delivery secrets, throttling, webhook bodies, and audit internals outside browser-readable schemas.
+- First registration requires email OTP and SMS OTP on the same Auth identity. Later login offers “Login com SMS” and “Login com email”, requiring only the chosen channel. RKMED issues/verifies both email and SMS challenges independently of Supabase OTP providers; use SMS Dev for transport and keep native Auth OTP delivery retired. See docs/smsdev-otp.md for the session bridge and configuration. Keep throttling, recipient allowlists and provider secrets server-side. No member PIN.
+
 - Use private member photos, short-lived authorized access, upload validation, and metadata stripping. Face detection does not establish identity or liveness.
 - Minimize personal data in logs and analytics. Never log CPF, PIN, QR credentials, auth links, access tokens, or full webhook payloads indiscriminately.
 - Audits are append-only and written by trusted backend operations. Capture actor, action, target, reason, timestamp, and correlation ID with redaction.

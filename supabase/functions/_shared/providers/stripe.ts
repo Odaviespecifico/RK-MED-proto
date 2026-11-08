@@ -25,7 +25,7 @@ export function createStripeSandbox(env: Environment, transport?: Pick<Stripe, '
       if (price.livemode !== false || !price.active || price.currency !== 'brl' || price.unit_amount !== 6960
         || price.recurring?.interval !== 'month' || price.recurring.interval_count !== 1) throw new StripeSandboxError('Preço de sandbox incompatível.')
       const session = await client.checkout.sessions.create({
-        mode: 'subscription', line_items: [{ price: price.id, quantity: 1 }],
+        mode: 'subscription', customer: customerId, line_items: [{ price: price.id, quantity: 1 }],
         ui_mode: 'hosted_page',
         billing_address_collection: 'auto',
         phone_number_collection: { enabled: true },

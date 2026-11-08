@@ -19,6 +19,15 @@ await context.addInitScript(() => {
     return stream
   }
 })
+if (process.env.RKMED_NO_WEBGL) await context.addInitScript(() => {
+  for (const prototype of [HTMLCanvasElement.prototype, OffscreenCanvas.prototype]) {
+    const original = prototype.getContext
+    prototype.getContext = function (type, ...args) {
+      if (type.includes('webgl')) return null
+      return original.call(this, type, ...args)
+    }
+  }
+})
 const page = await context.newPage()
 try {
   await page.goto(`${process.env.RKMED_TEST_URL ?? 'http://127.0.0.1:5173'}/cadastro`)
@@ -28,8 +37,8 @@ try {
   await page.getByRole('button', { name: 'Continuar' }).click()
   await page.getByPlaceholder('(81) 99999-9999').fill('81999990003')
   await page.getByRole('button', { name: 'Continuar' }).click()
-  await page.getByLabel('Código enviado por WhatsApp').fill('123456')
-  await page.getByRole('button', { name: 'Confirmar WhatsApp' }).click()
+  await page.getByLabel('Código enviado por SMS').fill('123456')
+  await page.getByRole('button', { name: 'Confirmar SMS' }).click()
   await page.getByPlaceholder('seu@email.com').fill('beatriz@exemplo.com')
   await page.getByRole('button', { name: 'Continuar' }).click()
   await page.getByLabel('Código enviado por e-mail').fill('123456')

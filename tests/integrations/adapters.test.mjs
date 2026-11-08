@@ -23,35 +23,42 @@ test('frontend rejects privileged credentials, production and wrong Supabase tar
   assert.throws(() => readPublicConfig({ VITE_APP_MODE: 'sandbox' }))
 })
 
-test('member OTP uses Supabase identity, disables implicit signup and keeps SMS within phone auth', async () => {
+test('member OTP requests and verifies RKMED challenges without invoking Supabase OTP', async () => {
   const calls = []
-  const client = { auth: {
-    signInWithOtp: async params => { calls.push(params); return { error: null } },
-    verifyOtp: async params => { calls.push(params); return { error: null, data: { user: { id: 'same-user' }, session: {} } } },
-  } }
+  const client = { functions: { invoke: async (name, { body }) => {
+    calls.push({ name, body })
+    return { error: null, data: body.action === 'request' ? { challengeId: 'a0000000-0000-4000-8000-000000000001' } : { userId: 'same-user', session: { access_token: 'access', refresh_token: 'refresh' } } }
+  } }, auth: { setSession: async () => ({ error: null, data: { user: { id: 'same-user' } } }) } }
   const auth = createMemberAuth(client)
-  for (const channel of ['whatsapp', 'sms', 'email']) {
-    const request = { channel, contact: channel === 'email' ? ' MEMBER@EXAMPLE.INVALID ' : '(81) 99999-0001' }
-    await auth.requestCode(request)
-    assert.equal((await auth.verifyCode({ ...request, token: '111111' })).userId, 'same-user')
+  for (const channel of ['sms', 'email']) {
+    const contact = channel === 'sms' ? '(81) 99999-0001' : ' MEMBER@EXAMPLE.INVALID '
+    await auth.requestCode({ contact, channel })
+    assert.equal((await auth.verifyCode({ contact, channel, token: '123456' })).userId, 'same-user')
   }
-  assert.equal(calls[0].options.shouldCreateUser, false)
-  assert.equal(calls[0].options.channel, 'whatsapp')
-  assert.equal(calls[1].type, 'sms')
-  assert.equal(calls[2].options.channel, 'sms')
-  assert.equal(calls[4].email, 'member@example.invalid')
-  assert.equal(calls[5].type, 'email')
-  assert.equal(normalizeContact({ channel: 'sms', contact: '+55 81 99999-0001' }), '+5581999990001')
-  await assert.rejects(() => auth.verifyCode({ channel: 'email', contact: 'member@example.invalid', token: '123' }))
+  assert.equal(calls[0].body.contact, '+5581999990001')
+  assert.equal(calls[0].body.purpose, 'login')
+  assert.equal(calls[1].body.action, 'verify')
+  assert.equal(calls[2].body.contact, 'member@example.invalid')
+  const before = calls.length
+  await assert.rejects(() => auth.requestCode({ channel: 'whatsapp', contact: '(81) 99999-0001' }))
+  await assert.rejects(() => auth.verifyCode({ channel: 'sms', contact: '(81) 99999-0001', token: '123456' }), /Solicite/)
+  assert.equal(calls.length, before)
 })
 
-test('provider failure never falls back to a demo OTP, identity or optimistic verification', async () => {
-  const auth = createMemberAuth({ auth: {
-    signInWithOtp: async () => ({ error: new Error('sensitive provider payload') }),
-    verifyOtp: async () => ({ error: new Error('sensitive provider payload'), data: {} }),
-  } })
+test('phone attachment uses the same actor session and never accepts an unverified response', async () => {
+  let sessionWrites = 0
+  const client = { functions: { invoke: async (_name, { body }) => ({ error: null, data: body.action === 'request' ? { challengeId: 'a0000000-0000-4000-8000-000000000001' } : { userId: 'member', verified: true } }) }, auth: { setSession: async () => { sessionWrites++; throw Error('not needed') } } }
+  const auth = createMemberAuth(client, 'attach')
+  const request = { channel: 'sms', contact: '(81) 99999-0001' }
+  await auth.requestCode(request)
+  assert.equal((await auth.verifyCode({ ...request, token: '123456' })).userId, 'member')
+  assert.equal(sessionWrites, 0)
+})
+
+test('provider failure never falls back to a demo OTP or optimistic verification', async () => {
+  const auth = createMemberAuth({ functions: { invoke: async () => ({ error: new Error('sensitive provider payload') }) } })
   await assert.rejects(() => auth.requestCode({ channel: 'email', contact: 'a@example.invalid' }), error => !error.message.includes('sensitive'))
-  await assert.rejects(() => auth.verifyCode({ channel: 'email', contact: 'a@example.invalid', token: '123456' }), /inválido ou expirado/)
+  await assert.rejects(() => auth.verifyCode({ channel: 'email', contact: 'a@example.invalid', token: '123456' }), /Solicite/)
 })
 
 test('Twilio is disabled by default and recipient allowlist is checked before network calls', async () => {
@@ -89,8 +96,14 @@ test('Stripe server retries preserve all idempotent request parameters and never
   await billing.createCheckout('cus_fixture', operation)
   await billing.createCheckout('cus_fixture', operation)
   assert.deepEqual(calls[0], calls[1])
+  assert.equal(calls[0].params.customer, 'cus_fixture')
+  assert.equal(calls[0].params.ui_mode, 'hosted_page')
+  assert.equal(calls[0].params.mode, 'subscription')
+  assert.equal(calls[0].params.payment_method_collection, 'always')
+  assert.equal(calls[0].params.integration_identifier, 'hosted_mobile_app_0001')
+  assert.equal(calls[0].params.origin_context, 'mobile_app')
   assert.equal('payment_method_types' in calls[0].params, false)
-  assert.equal('automatic_tax' in calls[0].params, false)
+  assert.deepEqual(calls[0].params.automatic_tax, { enabled: false })
   assert.equal('eligible' in calls[0].params, false)
 })
 

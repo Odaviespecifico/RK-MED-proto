@@ -1,5 +1,4 @@
-import { readFileSync } from 'node:fs';
-import { parseEnv } from 'node:util';
+import { readEnvironment } from '../env/files.mjs';
 import Stripe from 'stripe';
 
 export const API_VERSION = '2026-09-30.endive';
@@ -41,12 +40,11 @@ export function readConfig(env = process.env, { requireKey = false, requireWebho
 }
 
 export function loadConfig(options) {
-  const file = process.env.STRIPE_ENV_FILE || '.env.stripe.local';
-  let fileEnv = {};
-  try { fileEnv = parseEnv(readFileSync(file, 'utf8')); }
-  catch (error) { if (error.code !== 'ENOENT') throw new SandboxError('Não foi possível ler o arquivo de ambiente Stripe.'); }
-  // CI/secret-store values take precedence over the local file.
-  return readConfig({ ...fileEnv, ...process.env }, options);
+  let env;
+  try { env = readEnvironment('test'); }
+  catch { throw new SandboxError('Não foi possível ler .env.test.'); }
+  // The standalone CLI listener and the Edge webhook can have different secrets.
+  return readConfig({ ...env, STRIPE_WEBHOOK_SECRET: env.STRIPE_CLI_WEBHOOK_SECRET || env.STRIPE_WEBHOOK_SECRET }, options);
 }
 
 export function stripeClient(config) {

@@ -3,6 +3,8 @@
     "stripe": "npm:stripe@23.0.0",
     "@supabase/supabase-js": "npm:@supabase/supabase-js@2.118.0",
     "@tensorflow/tfjs": "npm:@tensorflow/tfjs@4.22.0",
+    "@tensorflow/tfjs-core": "npm:@tensorflow/tfjs-core@4.22.0",
+    "@tensorflow/tfjs-backend-cpu": "npm:@tensorflow/tfjs-backend-cpu@4.22.0",
     "@tensorflow-models/blazeface": "npm:@tensorflow-models/blazeface@0.1.0",
     "jpeg-js": "npm:jpeg-js@0.4.4",
     "standardwebhooks": "npm:standardwebhooks@1.1.1"

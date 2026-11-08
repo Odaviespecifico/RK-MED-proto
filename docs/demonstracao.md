@@ -14,7 +14,7 @@ Open <http://127.0.0.1:5173>. For a production-style PWA preview, run `npm run b
 | Journey | Demo values |
 | --- | --- |
 | Member email login | `ana@exemplo.com` → OTP `123456` |
-| Member WhatsApp login | `81999990001` → OTP `123456` (SMS fallback button is simulated) |
+| Member SMS login | `81999990001` → OTP `123456` (resend stays on SMS) |
 | Existing member | Ana Paula Lima is active; Carlos Henrique Silva is blocked. |
 | Partner login | `parceiro@rkmed.demo` / `demo123` |
 | Partner employee | Select Laboratório Vida and enter `2468` for Marina Costa. Admin can register more employees, change codes and deactivate accounts. |
@@ -22,9 +22,9 @@ Open <http://127.0.0.1:5173>. For a production-style PWA preview, run `npm run b
 | No-phone fallback | Search Ana's CPF `12345678909`, then confirm her photo. Carlos' CPF `98765432100` demonstrates blocked access. |
 | Admin login | `admin@rkmed.demo` / `demo123` |
 | Director viewer | `diretoria@rkmed.demo` / `demo123`; collections and reversal actions are hidden. |
-| New enrollment | Enter name, birth date and an unused valid CPF; then WhatsApp, its demo code `123456`, e-mail and its demo code `123456`. The front camera opens automatically on the final photo step and detects a face live. You can also choose a single-face JPG/PNG/HEIC. The portrait in `tests/fixtures/face-portrait.jpg` is fictional test data. |
+| New enrollment | Enter name, birth date and an unused valid CPF; then SMS, its demo code `123456`, e-mail and its demo code `123456`. The front camera opens automatically on the final photo step and detects a face live. You can also choose a single-face JPG/PNG/HEIC. The portrait in `tests/fixtures/face-portrait.jpg` is fictional test data. |
 
-Member login has three screens: choose WhatsApp or e-mail, enter that contact, and confirm its demo code. The chosen contact can be changed before confirmation. SMS is available as a fallback for WhatsApp.
+Member login has three screens: choose SMS or e-mail, enter that contact, and confirm its demo code. The chosen contact can be changed before confirmation. Resending keeps the selected SMS or email channel. WhatsApp is unavailable.
 
 An initial purchase of R$200 at Laboratório Vida gives a 20% discount (R$40); the member pays R$160 directly to the partner. The purchase appears in history and savings. Admin can reverse it without a time limit. Admin collections can simulate sending a payment link and retrying the same invoice; neither action charges a card.
 
@@ -34,11 +34,11 @@ The login, OTP delivery, staff protection, payment, collections and legal accept
 
 ## Photo detection and PWA
 
-The enrollment camera opens on the photo step and runs Google's MediaPipe BlazeFace model locally on live video. Capture requires one sufficiently large face inside the central crop, meeting the configured confidence threshold across three consecutive checks. Set `VITE_FACE_DETECTION_MIN_CONFIDENCE=0.8` in `.env` (see `.env.example`) to tune that threshold from greater than 0 to 1; invalid or missing values use `0.8`. Restart Vite after changing it. This `VITE_` value is included in the browser bundle, so it is configuration, not a secret. Camera permission denial and unsupported devices can use the photo picker. Captured and uploaded photos are checked again on the actual 600×600 crop before it is saved as JPEG. Detection does not match a person to a document, prove liveness, or prevent someone using another person's photo. The model and WebAssembly runtime are stored in `public/` and served by the prototype. The first model load can take a moment. The photo check is a demo-side guard and must be repeated/trusted on the backend before real enrollment.
+The enrollment camera opens on the photo step and runs Google's MediaPipe BlazeFace model locally on live video. Capture requires one sufficiently large face inside the central crop, meeting the configured confidence threshold across three consecutive checks. Set `VITE_FACE_DETECTION_MIN_CONFIDENCE=0.8` in `.env.test` (see [environment setup](ambientes.md)) to tune that threshold from greater than 0 to 1; invalid or missing values use `0.8`. Restart Vite after changing it. This `VITE_` value is included in the browser bundle, so it is configuration, not a secret. Camera permission denial and unsupported devices can use the photo picker. Captured and uploaded photos are checked again on the actual 600×600 crop before it is saved as JPEG. Detection does not match a person to a document, prove liveness, or prevent someone using another person's photo. The model and WebAssembly runtime are stored in `public/` and served by the prototype. The first model load can take a moment. The photo check is a demo-side guard and must be repeated/trusted on the backend before real enrollment.
 
 ## Partner map
 
-The public partner section and member directory show the demo partner addresses. Selecting a partner changes the address shown. For the interactive Google map, enable the **Maps Embed API** in a Google Cloud project, create a browser API key restricted to your site referrers and this API, and set `VITE_GOOGLE_MAPS_EMBED_KEY` in a local `.env` or the hosting environment. Restart Vite after changing the variable. Until a key is set, the page shows the selected address with an “Abrir no Google Maps” link. The current addresses and business names are fictional fixtures; replace them with verified partner locations before using the map publicly. An embed key is visible in the browser and must be restricted in Google Cloud.
+The public partner section and member directory show the demo partner addresses. Selecting a partner changes the address shown. For the interactive Google map, enable the **Maps Embed API** in a Google Cloud project, create a browser API key restricted to your site referrers and this API, and set `VITE_GOOGLE_MAPS_EMBED_KEY` in the root `.env.test` or the hosting environment. Restart Vite after changing the variable. Until a key is set, the page shows the selected address with an “Abrir no Google Maps” link. The current addresses and business names are fictional fixtures; replace them with verified partner locations before using the map publicly. An embed key is visible in the browser and must be restricted in Google Cloud.
 
 The installable PWA caches the UI shell, including member routes. Mock member data and the QR persist in the browser and can be viewed after an online visit when offline. Operations that need a connection, including logins, billing changes, support messages and partner/admin activity, are disabled offline. Browser storage may be cleared by the user or evicted by the browser. Uploaded-photo detection assets are not precached; run enrollment online. Install and camera access on a phone require HTTPS (or local `localhost` for development).
 

@@ -1,0 +1,26 @@
+.member-install-dialog {
+  width: min(420px, calc(100% - 32px));
+  max-height: calc(100dvh - 40px);
+  margin: auto;
+  padding: 36px 26px 24px;
+  overflow-y: auto;
+  color: #272a25;
+  background: #faf8f2;
+  border: 1px solid #ddd6c7;
+  border-radius: 22px;
+  box-shadow: 0 24px 80px #171c1840;
+}
+.member-install-dialog::backdrop { background: #151c186b; backdrop-filter: blur(4px); }
+.member-install-close { position: absolute; top: 10px; right: 10px; display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 50%; background: transparent; color: #5c6156; cursor: pointer; }
+.member-install-close:hover { background: #ebe7dc; }
+.member-install-mark { display: grid; place-items: center; width: 62px; height: 62px; margin-bottom: 24px; border: 1px solid #d9c89d; border-radius: 17px; background: #eee5ce; color: #655326; }
+.member-install-eyebrow { display: block; color: #71613e; font-size: 11px; font-weight: 700; letter-spacing: .13em; }
+.member-install-dialog h2 { margin: 10px 0 12px; font-size: 29px; line-height: 1.16; letter-spacing: -.035em; text-wrap: balance; }
+.member-install-dialog p { margin: 0; color: #62665b; font-size: 15px; line-height: 1.6; }
+.member-install-steps { display: grid; gap: 18px; margin: 24px 0; padding: 22px 0; list-style: none; border-block: 1px solid #e0dbce; }
+.member-install-steps li, .member-install-instructions { display: flex; align-items: flex-start; gap: 12px; font-size: 14px; line-height: 1.6; }
+.member-install-steps svg, .member-install-instructions svg { flex-shrink: 0; margin-top: 2px; color: #766437; }
+.member-install-instructions { margin: 24px 0; }
+.member-install-actions { display: grid; gap: 8px; margin-top: 24px; }
+.member-install-actions button { min-height: 46px; width: 100%; }
+.member-install-dialog :focus-visible { outline: 2px solid #766437; outline-offset: 3px; }

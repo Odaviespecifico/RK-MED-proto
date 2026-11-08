@@ -89,7 +89,7 @@ test('RF-PAG: creates missing catalog with stable idempotency keys', async () =>
   assert.equal(writes[1].params.unit_amount, 6960);
 });
 
-test('RF-PAG: Checkout uses server-selected recurring price and synthetic reference only', async () => {
+test('RF-PAG: Checkout uses server-selected recurring price and Checkout Studio settings', async () => {
   let captured;
   await createCheckout(catalogClient({ checkout: { sessions: {
     create: async (params, options) => { captured = { params, options }; return { id: 'cs_test_fixture', livemode: false }; },
@@ -97,8 +97,17 @@ test('RF-PAG: Checkout uses server-selected recurring price and synthetic refere
   assert.equal(captured.params.mode, 'subscription');
   assert.deepEqual(captured.params.line_items, [{ price: 'price_fixture', quantity: 1 }]);
   assert.equal('payment_method_types' in captured.params, false);
-  assert.equal('automatic_tax' in captured.params, false);
-  assert.match(captured.params.integration_identifier, /^rkmed_sandbox_[a-z]{8}$/);
+  assert.deepEqual(captured.params.automatic_tax, { enabled: false });
+  assert.equal(captured.params.ui_mode, 'hosted_page');
+  assert.equal(captured.params.billing_address_collection, 'auto');
+  assert.deepEqual(captured.params.phone_number_collection, { enabled: true });
+  assert.equal(captured.params.allow_promotion_codes, true);
+  assert.equal(captured.params.payment_method_collection, 'always');
+  assert.equal(captured.params.submit_type, 'auto');
+  assert.deepEqual(captured.params.name_collection, { individual: { enabled: true } });
+  assert.deepEqual(captured.params.saved_payment_method_options, { payment_method_save: 'enabled' });
+  assert.equal(captured.params.integration_identifier, 'hosted_mobile_app_0001');
+  assert.equal(captured.params.origin_context, 'mobile_app');
   assert.match(captured.params.success_url, /^http:\/\/127\.0\.0\.1:4242\/success/);
   assert.match(captured.options.idempotencyKey, /^acct_fixture:checkout:/);
 });

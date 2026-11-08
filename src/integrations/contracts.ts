@@ -1,5 +1,5 @@
 export type PublicPartner = { id: string; name: string; segment: string; discount: number; address: string; initials: string; tone: string }
-export type OtpChannel = 'email' | 'whatsapp' | 'sms'
+export type OtpChannel = 'email' | 'sms'
 export type OtpRequest = { contact: string; channel: OtpChannel }
 export type MemberAuth = {
   requestCode(request: OtpRequest): Promise<void>

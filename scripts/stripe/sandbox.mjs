@@ -1,19 +1,12 @@
-import { copyFileSync, constants } from 'node:fs';
+import { ensureEnvironmentFiles } from '../env/files.mjs';
 import { loadConfig, stripeClient, verifyAccount, API_VERSION, reportError } from './config.mjs';
 import { ensureCatalog, createCheckout, createDraftInvoice } from './fixtures.mjs';
 
 try {
   const command = process.argv[2];
   if (command === 'init') {
-    try {
-      copyFileSync('.env.stripe.example', '.env.stripe.local', constants.COPYFILE_EXCL);
-      const { chmodSync } = await import('node:fs');
-      chmodSync('.env.stripe.local', 0o600);
-      console.log('.env.stripe.local criado, sem credenciais. Configure somente chaves de teste.');
-    } catch (error) {
-      if (error.code !== 'EEXIST') throw error;
-      console.log('.env.stripe.local já existe e foi preservado.');
-    }
+    ensureEnvironmentFiles();
+    console.log('.env.test e .env.prod preparados; valores existentes preservados. Configure Stripe de teste somente em .env.test.');
   } else if (command === 'doctor') {
     const config = loadConfig();
     console.log(JSON.stringify({

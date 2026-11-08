@@ -3,6 +3,7 @@ import { processEvent, reconcile, sandboxStripe, trustedRpc } from '../_shared/b
 import type { BackendMember } from '../_shared/billing.ts'
 import { createResendSandbox } from '../_shared/providers/resend.ts'
 import { response } from '../_shared/http.ts'
+import { sendWedeaShare } from '../_shared/wedea.ts'
 const env = Deno.env.toObject()
 Deno.serve(async request => {
   if (request.method !== 'POST' || !['local', 'sandbox'].includes(env.APP_ENV || '') || !env.JOBS_SECRET || env.JOBS_SECRET.length < 32 || request.headers.get('authorization') !== `Bearer ${env.JOBS_SECRET}`) return response({ error: 'Acesso negado' }, 403)
@@ -13,6 +14,8 @@ Deno.serve(async request => {
     let failures = 0
     for (const event of pending.events.slice(0, 100)) { try { await processEvent(db, stripe, env, await stripe.events.retrieve(event.id)) } catch { failures++ } }
     for (const customer of pending.customers) { try { await reconcile(db, stripe, customer, env.STRIPE_PRICE_ID!) } catch { failures++ } }
+    const shares = await trustedRpc<string[]>(db, 'rk_wedea_pending')
+    for (const invoiceId of shares) { try { await sendWedeaShare(db, stripe, env, invoiceId) } catch { failures++ } }
     for (const item of pending.messages.slice(0, 100)) {
       const owner = crypto.randomUUID()
       if (!await trustedRpc<boolean>(db, 'rk_backend_claim_delivery', { p_id: item.id, p_owner: owner })) continue

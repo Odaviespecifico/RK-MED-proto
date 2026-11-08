@@ -1,4 +1,12 @@
+> **OTP atual:** códigos de SMS/e-mail são gerados e validados pela RKMED. SMS Dev é somente transporte. Configuração e limites: [integração SMS Dev](docs/smsdev-otp.md). A configuração de SMS nativo mencionada abaixo foi substituída por D29.
+
+# Decisão vigente: OTP de telefone por SMS
+
+A decisão atual substitui WhatsApp por SMS. Login oferece SMS ou e-mail; primeiro cadastro verifica ambos. O envio usa o provedor nativo configurado no Supabase Auth, com `SMS_MODE=supabase-native` e `SMS_ALLOWED_TEST_NUMBERS` no gateway. Desativar o hook Send SMS legado antes de habilitar o provedor nativo. Credenciais e entrega externa ainda precisam de configuração/aceite; referências a WhatsApp abaixo são históricas.
+
 # RKMED Linha Gold
+
+**Decisão atual — 04/11/2026:** a API oficial do WhatsApp da Meta substitui o Twilio (D26 em [plan.md](plan.md)). A migração do código de entrega ainda está pendente; referências ao transporte Twilio abaixo descrevem o legado e não devem ser usadas para configurar novos envios. A alternativa por SMS foi removida por decisão do usuário em 04/11/2026; códigos de telefone serão entregues apenas pelo WhatsApp. Supabase Auth e Resend permanecem.
 
 Aplicação React/Vite/TypeScript na raiz do repositório, com Supabase local e fluxos conectados ao Supabase local e integrações em sandbox. A interface original foi preservada. A demonstração usa dados fictícios isolados em `src/mocks/`; o modo sandbox usa módulos próprios, sem sucesso ou permissões simuladas.
 
@@ -13,7 +21,7 @@ npm run dev
 
 Demonstração: http://127.0.0.1:5173. [Credenciais e jornadas de demonstração](docs/demonstracao.md).
 
-Para preparar o ambiente com Supabase local, copiar `.env.example` para `.env.local` na raiz e preencher somente a URL e a chave publicável/anon locais. O arquivo já existente nesta máquina foi preservado.
+Execute `npm run env:init` para criar `.env.test` e `.env.prod` na raiz, sem sobrescrever valores existentes. Para desenvolvimento local, configure em `.env.test` a URL e a chave publicável/anon do Supabase e os campos de servidor necessários. Veja [configuração de ambientes](docs/ambientes.md) para comandos e separação entre valores públicos e segredos.
 
 ```bash
 npm run db:start

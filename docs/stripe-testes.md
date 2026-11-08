@@ -28,7 +28,7 @@ Para uma integração nova, a Stripe recomenda sandboxes separados, com dados e 
 
 | Ambiente da ferramenta | Uso | Credenciais e dados |
 | --- | --- | --- |
-| `local` | Desenvolvimento manual | Sandbox RKMED de desenvolvimento; `.env.stripe.local`, ignorado pelo Git |
+| `local` | Desenvolvimento manual | Sandbox RKMED de desenvolvimento; `.env.test`, ignorado pelo Git |
 | `ci` | Testes automatizados com provedor, quando necessários | Outro sandbox; segredos do CI e `STRIPE_TEST_ENV=ci` |
 | `staging` | Homologação integrada futura | Outro sandbox e configuração própria, sem chaves live |
 | Produção | Não suportada por estas ferramentas | Valores como `production`, chaves live e objetos live são rejeitados |
@@ -46,7 +46,7 @@ npm run stripe:doctor
 npm run stripe:test
 ```
 
-`stripe:init` cria `.env.stripe.local` com permissões restritas e valores vazios; se o arquivo existe, preserva seu conteúdo. `stripe:doctor` valida a configuração sem fazer chamadas externas e sem imprimir segredos. `remoteConnectionVerified: false` é esperado nesse diagnóstico e não deve ser apresentado como conexão autenticada.
+`stripe:init` e `env:init` criam `.env.test` e `.env.prod` com permissões restritas e segredos vazios; arquivos existentes são preservados. `stripe:doctor` valida `.env.test` sem fazer chamadas externas e sem imprimir segredos. `remoteConnectionVerified: false` é esperado nesse diagnóstico e não deve ser apresentado como conexão autenticada.
 
 Para executar somente o receptor de assinaturas, configurar `STRIPE_WEBHOOK_SECRET`. Ele não precisa de chave da API. Sem segredo, o comando recusa inicializar.
 
@@ -56,7 +56,7 @@ Esta etapa permanece pendente por escolha do operador.
 
 1. No Dashboard da Stripe, criar/selecionar um sandbox da RKMED para desenvolvimento. Criar outro separado para CI/homologação quando esses ambientes forem usados.
 2. No sandbox selecionado, obter o Account ID `acct_...` e criar preferencialmente uma **chave restrita de teste**, com apenas as permissões das operações necessárias. Para os comandos completos: leitura da própria conta, leitura/escrita de Products/Prices, Checkout Sessions, Customers, Invoices e Invoice Items. Conferir os nomes/permissões disponíveis no painel e acrescentar dependências somente se exigidas pela API. [Chaves Stripe](https://docs.stripe.com/keys).
-3. Preencher o arquivo ignorado `.env.stripe.local` localmente, sem colar valores na conversa:
+3. Preencher o arquivo ignorado `.env.test` localmente, sem colar valores na conversa:
 
    ```dotenv
    STRIPE_TEST_ENV=local
@@ -69,7 +69,7 @@ Esta etapa permanece pendente por escolha do operador.
    Preencher o valor vazio da chave de teste no arquivo real; o exemplo acima não contém uma chave utilizável. Nunca usar `VITE_STRIPE_SECRET_KEY`, nem mover os segredos para o bundle Vite. A ferramenta aceita chaves de teste restritas/secretas e chaves temporárias de sandbox; recusa as de produção e as publicáveis.
 
 4. Rodar `npm run stripe:doctor` para verificar a presença das configurações. Nos comandos remotos, a conta é consultada e comparada a `STRIPE_TEST_ACCOUNT_ID` **antes de qualquer alteração**. Permissão negada ou conta diferente interrompe a operação.
-5. Para outro arquivo, definir `STRIPE_ENV_FILE` com o caminho desejado. Variáveis do processo/gerenciador de segredos têm precedência sobre o arquivo. No CI, guardar segredos no cofre da plataforma; não publicar saídas da CLI, URLs de Checkout ou arquivos de ambiente como artifacts.
+5. As ferramentas leem somente `.env.test`; variáveis do processo/gerenciador de segredos têm precedência. Usar `STRIPE_WEBHOOK_SECRET` para as Edge Functions e `STRIPE_CLI_WEBHOOK_SECRET` para um listener independente diferente. No CI, guardar segredos no cofre da plataforma; não publicar saídas da CLI, URLs de Checkout ou arquivos de ambiente como artifacts.
 
 ## 3. Preparar o catálogo Billing
 

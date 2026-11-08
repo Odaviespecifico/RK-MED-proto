@@ -2,13 +2,11 @@ import { PublicError } from './http.ts'
 import Stripe from 'stripe'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createStripeSandbox } from './providers/stripe.ts'
+import { trustedRpc } from './backend-rpc.ts'
+import { sendWedeaShare } from './wedea.ts'
+export { trustedRpc } from './backend-rpc.ts'
 export type BackendMember = { id: string; name: string; email: string; phone: string; verified: boolean; consented: boolean; photoPath: string | null; customerId: string | null; subscriptionId: string | null; invoiceId: string | null; state: string; blocked: boolean }
 export type Environment = Record<string, string | undefined>
-export async function trustedRpc<T>(db: SupabaseClient, name: string, args?: Record<string, unknown>): Promise<T> {
-  const { data, error } = await db.rpc(name, args)
-  if (error) throw new PublicError(`Não foi possível concluir ${name.replace(/^rk_/, '')}.`)
-  return data as T
-}
 export async function sandboxStripe(env: Environment) {
   createStripeSandbox(env) // Reject missing/live credentials before any network access.
   const stripe = new Stripe(env.STRIPE_SECRET_KEY!, { apiVersion: '2026-09-30.endive', maxNetworkRetries: 2, timeout: 20_000 })
@@ -29,7 +27,7 @@ export function subscriptionSnapshot(subscription: Stripe.Subscription, invoice:
   return { state, paidThrough: invoice?.status === 'paid' ? new Date(items[0].current_period_end * 1000).toISOString() : null,
     cancel: subscription.cancel_at_period_end, invoice: invoice?.id || null, amount: invoice?.amount_remaining ?? 6960 }
 }
-export async function reconcile(db: SupabaseClient, stripe: Stripe, customer: string, price: string) {
+export async function reconcile(db: SupabaseClient, stripe: Stripe, customer: string, price: string, paidInvoice?: Stripe.Invoice) {
   const owner = crypto.randomUUID()
   const member = await trustedRpc<string | null>(db, 'rk_sync_claim', { p_customer: customer, p_owner: owner })
   if (!member) return
@@ -42,8 +40,18 @@ export async function reconcile(db: SupabaseClient, stripe: Stripe, customer: st
   if (!subscription) throw new PublicError('Assinatura ainda não disponível para sincronização.')
   const invoice = typeof subscription.latest_invoice === 'string' ? await stripe.invoices.retrieve(subscription.latest_invoice) : subscription.latest_invoice
   const snapshot = subscriptionSnapshot(subscription, invoice, price)
-  await trustedRpc(db, 'rk_sync_apply', { p_member: member, p_owner: owner, p_subscription: subscription.id,
-    p_state: snapshot.state, p_paid_through: snapshot.paidThrough, p_cancel: snapshot.cancel, p_invoice: snapshot.invoice, p_amount: snapshot.amount })
+  const sync = { p_member: member, p_owner: owner, p_subscription: subscription.id,
+    p_state: snapshot.state, p_paid_through: snapshot.paidThrough, p_cancel: snapshot.cancel, p_invoice: snapshot.invoice, p_amount: snapshot.amount }
+  const paidSubscription = paidInvoice?.parent?.subscription_details?.subscription
+  const paidSubscriptionId = typeof paidSubscription === 'string' ? paidSubscription : paidSubscription?.id
+  if (paidInvoice && paidSubscriptionId && matching.some(s => s.id === paidSubscriptionId)) {
+    subscriptionSnapshot(matching.find(s => s.id === paidSubscriptionId)!, paidInvoice, price)
+    if (paidInvoice.livemode || paidInvoice.status !== 'paid' || paidInvoice.currency !== 'brl'
+      || !Number.isSafeInteger(paidInvoice.amount_paid) || paidInvoice.amount_paid < 0) throw new PublicError('Pagamento incompatível com a mensalidade.')
+    // Reconcile entitlement and snapshot the threshold in one database transaction.
+    await trustedRpc(db, 'rk_sync_apply_wedea', { p_sync: sync, p_paid_invoice: paidInvoice.id,
+      p_paid_subscription: paidSubscriptionId, p_paid_amount: paidInvoice.amount_paid })
+  } else await trustedRpc(db, 'rk_sync_apply', sync)
 }
 export async function checkout(db: SupabaseClient, stripe: Stripe, env: Environment, userId: string, operation: string) {
   const info = await trustedRpc<BackendMember | null>(db, 'rk_backend_member', { p_member: userId })
@@ -89,12 +97,14 @@ export async function processEvent(db: SupabaseClient, stripe: Stripe, env: Envi
   if (status === 'processed') return
   try {
     let customer: string | null = null
+    let paidInvoice: Stripe.Invoice | undefined
     if (event.type.startsWith('customer.subscription.')) {
       const subscription = await stripe.subscriptions.retrieve(objectId)
       customer = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id
     } else if (event.type.startsWith('invoice.')) {
       const invoice = await stripe.invoices.retrieve(objectId)
       customer = typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id || null
+      if (event.type === 'invoice.paid') paidInvoice = invoice
     } else if (event.type.startsWith('checkout.')) {
       const session = await stripe.checkout.sessions.retrieve(objectId)
       customer = typeof session.customer === 'string' ? session.customer : session.customer?.id || null
@@ -105,7 +115,8 @@ export async function processEvent(db: SupabaseClient, stripe: Stripe, env: Envi
       // Risk never silently grants or revokes entitlement: queue a deduplicated operational review.
       if (customer) await trustedRpc(db, 'rk_backend_risk', { p_customer: customer, p_event: event.id, p_kind: `risk.${event.type}` })
     }
-    if (customer && !riskEvents.has(event.type)) await reconcile(db, stripe, customer, env.STRIPE_PRICE_ID!)
+    if (customer && !riskEvents.has(event.type)) await reconcile(db, stripe, customer, env.STRIPE_PRICE_ID!, paidInvoice)
+    if (paidInvoice) await sendWedeaShare(db, stripe, env, paidInvoice.id)
     await trustedRpc(db, 'rk_event_finish', { p_id: event.id })
   } catch (error) {
     await trustedRpc(db, 'rk_event_finish', { p_id: event.id, p_error: 'processing_failed' })

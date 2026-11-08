@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path=public,extensions;
-select plan(21);
+select plan(24);
 select ok(not has_function_privilege('authenticated','public.rk_backend_member(uuid)','EXECUTE'),'Browser cannot read provider identities');
 select ok(not has_function_privilege('authenticated','public.rk_sync_apply(uuid,uuid,text,text,timestamptz,boolean,text,bigint)','EXECUTE'),'Browser cannot grant benefits');
 select ok(not has_function_privilege('anon','public.rk_checkout_begin(uuid,uuid)','EXECUTE'),'Anon cannot create billing operations');
@@ -17,9 +17,12 @@ select is(public.rk_event_record('evt_LocalReplay','invoice.paid','in_LocalInvoi
 select lives_ok($$select public.rk_event_finish('evt_LocalReplay')$$,'Processed event accepted');
 select is(public.rk_event_record('evt_LocalReplay','invoice.paid','in_LocalInvoice',100),'processed','Processed replay stays processed');
 select ok(not has_function_privilege('authenticated','public.rk_phone_prepare(text,text)','EXECUTE'),'Browser cannot forge delivery intents');
-select lives_ok($$select public.rk_phone_prepare('+12025550199','whatsapp')$$,'Channel intent prepared by server');
+select lives_ok($$select public.rk_phone_prepare('+12025550199','sms')$$,'Channel intent prepared by server');
 select throws_ok($$select public.rk_phone_prepare('+12025550199','sms')$$,'P0001','Aguarde 60 segundos antes de reenviar.','Intent cannot be overwritten during cooldown');
-select is(public.rk_phone_claim('+12025550199'),'whatsapp','Signed hook consumes exact requested channel');
+select throws_ok($$select public.rk_phone_prepare('+12025550198','whatsapp')$$,'P0001','Telefone ou canal inválido','Removed WhatsApp channel rejected before creating an intent');
+select throws_ok($$select public.rk_phone_prepare('+12025550198',null)$$,'P0001','Telefone ou canal inválido','Missing channel cannot bypass SMS-only delivery');
+select throws_ok($$insert into private.phone_delivery_intents(phone_hash,channel) values(extensions.digest('+12025550198','sha256'),'whatsapp')$$,'23514',null::text,'Storage constraint also rejects WhatsApp intents');
+select is(public.rk_phone_claim('+12025550199'),'sms','Signed hook consumes exact requested channel');
 select throws_ok($$select public.rk_phone_claim('+12025550199')$$,'P0001','Solicitação de entrega ausente ou expirada','Hook replay cannot resend OTP');
 insert into private.notification_outbox(id,member_id,event_key,kind) values('40000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000001','test-lease','billing.active');
 select is(public.rk_backend_claim_delivery('40000000-0000-4000-8000-000000000001','50000000-0000-4000-8000-000000000001'),true,'First worker claims delivery');

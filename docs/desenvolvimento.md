@@ -1,4 +1,12 @@
+> **OTP atual:** códigos de SMS/e-mail são gerados e validados pela RKMED. SMS Dev é somente transporte. Configuração e limites: [integração SMS Dev](smsdev-otp.md). A configuração de SMS nativo mencionada abaixo foi substituída por D29.
+
+# Decisão vigente: OTP de telefone por SMS
+
+A decisão atual substitui WhatsApp por SMS. Login oferece SMS ou e-mail; primeiro cadastro verifica ambos. O envio usa o provedor nativo configurado no Supabase Auth, com `SMS_MODE=supabase-native` e `SMS_ALLOWED_TEST_NUMBERS` no gateway. Desativar o hook Send SMS legado antes de habilitar o provedor nativo. Credenciais e entrega externa ainda precisam de configuração/aceite; referências a WhatsApp abaixo são históricas.
+
 # Desenvolvimento da aplicação RKMED
+
+**Decisão atual — 04/11/2026:** a API oficial do WhatsApp da Meta substitui o Twilio (D26 em [plan.md](../plan.md)). A migração do código de entrega ainda está pendente; referências ao transporte Twilio abaixo descrevem o legado e não devem ser usadas para configurar novos envios. A alternativa por SMS foi removida por decisão do usuário em 04/11/2026; códigos de telefone serão entregues apenas pelo WhatsApp. Supabase Auth e Resend permanecem.
 
 O frontend foi promovido de `prototype/` para a raiz, preservando estilos, assets e fluxos da demonstração. A raiz agora tem um único `package.json`, lockfile, `index.html`, configuração Vite e configuração de hospedagem. `prototype/README.md` permanece como referência histórica; arquivos locais antigos dessa pasta não são usados.
 
@@ -20,7 +28,7 @@ npm run db:start
 npm run local:prepare
 ```
 
-Em uma máquina nova, copiar `.env.example` para `.env.local` na **raiz** e preencher somente a URL local e a chave publicável/anon. O arquivo existente nesta máquina foi preservado. Não compartilhar a saída completa de `db:status`, pois também contém segredos administrativos.
+Em uma máquina nova, executar `npm run env:init` para criar `.env.test` e `.env.prod` na **raiz**, preservando arquivos existentes. Preencher os dados locais e provedores de teste em `.env.test`; somente `VITE_*` é público. Veja [ambientes](ambientes.md). Não compartilhar a saída completa de `db:status`, pois também contém segredos administrativos.
 
 ```bash
 npm run dev:sandbox
@@ -32,7 +40,7 @@ Abre o modo sandbox em `http://127.0.0.1:5174`. A porta separada isola sessões,
 
 | Variável | Uso |
 | --- | --- |
-| `VITE_APP_MODE` | `demo` (padrão) ou `sandbox`; `.env.sandbox` seleciona sandbox |
+| `VITE_APP_MODE` | `demo` (padrão) ou `sandbox`; `npm run dev:sandbox` seleciona sandbox |
 | `VITE_APP_ENV` | `local` para localhost; `sandbox` para um projeto remoto dedicado a testes |
 | `VITE_SUPABASE_URL` | `http://127.0.0.1:54321` no ambiente local |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | Chave publicável ou JWT de papel `anon`; chave privilegiada é rejeitada |
@@ -42,7 +50,7 @@ Abre o modo sandbox em `http://127.0.0.1:5174`. A porta separada isola sessões,
 
 Configuração incorreta interrompe a inicialização/build; não muda silenciosamente para uma demonstração. `VITE_*` com nomes de segredos/Twilio/Stripe é rejeitado antes de compilar. O frontend não precisa de chave Stripe para redirecionar ao Checkout criado pelo servidor.
 
-Para usar um Supabase remoto, criar/selecionar um projeto **dedicado a testes** e definir `VITE_APP_ENV=sandbox`, URL, referência e chave públicas correspondentes em `.env.sandbox.local`, ignorado pelo Git. A referência confere o destino; ela não comprova sozinha que a conta/projeto foi administrativamente separado da produção. Nenhum projeto remoto foi criado ou vinculado nesta entrega.
+Para usar um Supabase remoto, criar/selecionar um projeto **dedicado a testes** e definir `VITE_APP_ENV=sandbox`, URL, referência e chave públicas correspondentes em `.env.test`, ignorado pelo Git. A referência confere o destino; ela não comprova sozinha que a conta/projeto foi administrativamente separado da produção. Nenhum projeto remoto foi criado ou vinculado nesta entrega.
 
 ## Organização e comportamento
 
@@ -68,12 +76,12 @@ No sandbox, a landing lê parceiros ativos do banco. Cadastro, carteirinha, hist
 
 - O template OTP local está em `supabase/templates/otp.html`; mensagens aparecem no Mailpit em `http://127.0.0.1:54324`.
 - Telefones sintéticos reservados usam OTP fixo somente no Docker. Isso não comprova entrega externa.
-- O cadastro verifica e-mail e telefone na mesma identidade, oferece reenvio com espera e SMS dentro do fluxo de celular. Login continua com duas opções: WhatsApp e e-mail.
+- O cadastro verifica e-mail e telefone na mesma identidade, oferece reenvio com espera pelo mesmo canal, sem alternativa por SMS. Login continua com duas opções: WhatsApp e e-mail.
 - `phone-code` e os hooks assinados controlam o canal de entrega no servidor. As funções Twilio/Resend ficam desabilitadas até configuração explícita do sandbox.
 
 ## Provedores no servidor
 
-O [roteiro de homologação](homologacao.md#twilio-resend-e-jobs) é a referência de configuração de transportes, hooks e filas. `supabase/functions/.env` é ignorado pelo Git; nenhuma chave secreta deve entrar no frontend.
+O [roteiro de homologação](homologacao.md#twilio-resend-e-jobs) é a referência de configuração de transportes, hooks e filas. `.env.test` é ignorado pelo Git; nenhuma chave secreta deve entrar no frontend.
 
 `rkmed-api` valida sessão/perfil e executa foto, Checkout, portal, cancelamento e cobranças. Stripe exige conta/Price de teste, contatos, consentimentos e foto; eventos assinados, recibos duráveis e conciliação verificam a elegibilidade. Não existe ativação pelo redirecionamento do Checkout. Os [utilitários Stripe](stripe-testes.md) são independentes desses endpoints.
 
@@ -99,7 +107,7 @@ Os testes HTTP/navegador precisam de permissão para loopback e Brave. `test:e2e
 - [x] Bloquear produção/segredos públicos e testar falhas, isolamento e idempotência.
 - [ ] Provisionar identidade sintética e homologar e-mail OTP real na caixa local.
 - [ ] Implementar autorização/RLS, cadastro com dois contatos, aceites e domínio seguindo `plan.md`.
-- [ ] Implementar/validar hook de entrega, fallback SMS e endpoints autenticados, com limites e auditoria.
+- [ ] Migrar/validar o hook de entrega para Meta, apenas WhatsApp, e endpoints autenticados com limites e auditoria.
 - [ ] Configurar credenciais de sandbox e executar a homologação com os provedores quando autorizado.
 
 `vercel.json` foi ajustado para a raiz apenas para manter a configuração coerente. Nada foi publicado; não houve envio de mensagens, criação de recursos Stripe ou alteração de projeto remoto.

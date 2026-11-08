@@ -1,4 +1,12 @@
+> **OTP atual:** códigos de SMS/e-mail são gerados e validados pela RKMED. SMS Dev é somente transporte. Configuração e limites: [integração SMS Dev](smsdev-otp.md). A configuração de SMS nativo mencionada abaixo foi substituída por D29.
+
+# Decisão vigente: OTP de telefone por SMS
+
+A decisão atual substitui WhatsApp por SMS. Login oferece SMS ou e-mail; primeiro cadastro verifica ambos. O envio usa o provedor nativo configurado no Supabase Auth, com `SMS_MODE=supabase-native` e `SMS_ALLOWED_TEST_NUMBERS` no gateway. Desativar o hook Send SMS legado antes de habilitar o provedor nativo. Credenciais e entrega externa ainda precisam de configuração/aceite; referências a WhatsApp abaixo são históricas.
+
 # RKMED — passo a passo para entrar em produção
+
+**Decisão atual — 04/11/2026:** a API oficial do WhatsApp da Meta substitui o Twilio (D26 em [plan.md](../plan.md)). A migração do código de entrega ainda está pendente; referências ao transporte Twilio abaixo descrevem o legado e não devem ser usadas para configurar novos envios. A alternativa por SMS foi removida por decisão do usuário em 04/11/2026; códigos de telefone serão entregues apenas pelo WhatsApp. Supabase Auth e Resend permanecem.
 
 Este guia cobre a contratação e o pagamento dos serviços, a preparação técnica, a cobrança da assinatura e a entrega ao cliente final. Destina-se ao responsável pela RKMED, à equipe de desenvolvimento e à operação.
 
@@ -34,7 +42,7 @@ Criar as contas sob controle da RKMED, com e-mail institucional e recuperação 
 | Hospedagem do frontend | Confirmar o provedor; Vercel é a opção preparada no projeto | Plano compatível com uso comercial, limites e excedentes | Conta pronta para homologação e produção |
 | Supabase | Criar projetos separados e escolher capacidade, backups e suporte adequados | Plano, computação, armazenamento, tráfego e recuperação contratada | Backend de homologação e backend de produção separados |
 | Stripe | Ativar a conta comercial e cadastrar a conta bancária de recebimento | Tarifas de processamento e recursos de cobrança contratados | Conta habilitada a cobrar e receber |
-| Twilio/WhatsApp | Habilitar faturamento/saldo e preparar remetente e SMS | Número, verificações/mensagens e tarifas aplicáveis | Entrega real de OTP aprovada |
+| Meta / WhatsApp oficial | Preparar a conta e o número da RKMED para a integração direta escolhida em D26 | Conferir condições comerciais e limites vigentes da conta | Integração implementada e entrega real de OTP aprovada |
 | Resend | Verificar o domínio e contratar capacidade suficiente | Plano e volume de e-mails | Envio real de verificação e mensagens transacionais |
 | Backup e monitoramento | Definir ferramentas, destino das cópias e alertas | Armazenamento, retenção e serviços escolhidos | Recuperação e detecção de falhas operacionais |
 
@@ -163,7 +171,7 @@ Depende da base de autorização. Usar associados sintéticos com elegibilidade 
 
 - [x] Implementar validação de maioridade, CPF e duplicidade no servidor.
 - [ ] Registrar aceite de versões documentais aprovadas; impedir versões de `docs/legal-mocks/` em produção.
-- [ ] Implementar e-mail OTP e telefone OTP na mesma identidade Supabase, com WhatsApp/Twilio e SMS de fallback; Resend envia e-mails.
+- [ ] Implementar e-mail OTP e telefone OTP na mesma identidade Supabase, com WhatsApp pela API oficial da Meta (migração D26 pendente); Resend envia e-mails. SMS removido; manter reenvio pelo WhatsApp.
 - [x] Impedir conclusão do cadastro e abertura do Checkout com somente um contato verificado.
 - [x] Implementar login posterior por “Login com whatsapp” ou “Login com email”, exigindo apenas o canal escolhido; não adicionar PIN.
 - [x] Persistir sessão do associado com tokens curtos e refresh rotativo, sem tempo de vida/inatividade imposto pela aplicação.
@@ -241,25 +249,24 @@ Referências: [entrada em produção na Stripe](https://docs.stripe.com/get-star
 
 **Concluído quando:** pagamento, falha, recuperação, cancelamento, duplicidade e conciliação funcionam em teste, e a configuração real foi conferida separadamente.
 
-## 6. Habilitar WhatsApp, SMS e e-mail reais
+## 6. Habilitar WhatsApp oficial da Meta e e-mail reais
 
-1. Na Twilio, preparar uma conta com faturamento habilitado e registrar o remetente de WhatsApp pelo processo de Self Sign-up, cumprindo as verificações comerciais/Meta exigidas para produção. O Sandbox não substitui esse processo. Conferir o número escolhido antes de migrá-lo, pois isso pode afetar seu uso atual. [Guia oficial](https://www.twilio.com/docs/whatsapp/self-sign-up).
-2. Escolher e validar a integração de OTP compatível com Supabase Auth e Twilio, incluindo os templates/aprovações aplicáveis ao fluxo adotado. Implementar WhatsApp como canal principal e SMS como alternativa dentro desse fluxo. [Autenticação por telefone](https://supabase.com/docs/guides/auth/phone-login).
-3. Configurar limites de envio/tentativas, expiração e reenvio. Testar WhatsApp indisponível, fallback SMS e falha nos dois canais. Desabilitar códigos fixos de teste em produção.
-4. No Resend, adicionar o domínio de envio, publicar os registros DNS SPF/DKIM solicitados e aguardar a verificação. Configurar remetente e endereço de resposta. [Domínios verificados](https://resend.com/docs/dashboard/domains/introduction).
-5. Integrar o transporte de e-mail de verificação do Supabase e o envio transacional, conforme a solução implementada. Criar os templates aprovados e testar recebimento em provedores distintos.
-6. Provar que o primeiro cadastro exige e-mail **e** telefone verificados na mesma identidade. Para retornos, oferecer exatamente “Login com whatsapp” e “Login com email”; basta verificar o canal escolhido. Não criar outra conta ao alternar canais.
-7. Testar fila de mensagens, repetição controlada, falhas, saldo/limites e alertas. Definir o procedimento de recuperação de contato pelo suporte antes da abertura.
+1. Preparar a conta e o número de WhatsApp sob controle da RKMED para a API oficial da Meta. Conferir os requisitos atuais na documentação oficial antes da configuração; Twilio saiu do escopo.
+2. Implementar o novo adaptador de entrega e migrar `auth-sms`, `phone-code`, variáveis de ambiente e testes. Preservar emissão/validação do OTP pelo Supabase Auth, assinatura dos hooks, limites e vínculo à mesma identidade.
+3. Entregar códigos de telefone somente pelo WhatsApp, sem alternativa por SMS. Manter a confirmação dos dois contatos no primeiro cadastro. Testar falha de entrega, reenvio e expiração sem liberar cadastro indevidamente.
+4. Preparar o domínio/remetente no Resend e testar os e-mails de verificação e transacionais com destinatários controlados.
+5. Comprovar cadastro com os dois contatos na mesma conta, login posterior por WhatsApp ou e-mail e ausência de contas duplicadas ao alternar canais.
+6. Homologar entrega e falhas reais, mensagens aprovadas, limites, alertas e recuperação de contato pelo suporte.
 
-**Concluído quando:** destinatários controlados recebem OTPs reais e as falhas não permitem contornar verificação nem gerar contas duplicadas.
+**Concluído quando:** o transporte Meta substitui o legado no código, destinatários controlados recebem OTPs e falhas não permitem contornar verificação nem gerar identidades duplicadas.
 
 ## 7. Preparar o ambiente de produção e publicar
 
 Somente executar após o backend e a homologação estarem prontos. O deploy do frontend fica sob gestão do usuário, conforme o plano do projeto.
 
 1. Criar o projeto Supabase de produção, conferir região/capacidade e aplicar migrations revisadas pelo processo de deploy. Não copiar fixtures nem executar reset remoto. Publicar as funções implementadas, configurar buckets privados e agendar conciliação, mensagens e tarefas necessárias.
-2. Configurar segredos de servidor no ambiente apropriado: chave privilegiada do Supabase, Stripe secret key, segredo do webhook, credenciais Twilio e Resend. Os nomes exatos serão definidos pela implementação; não existe ainda um conjunto completo de variáveis de produção.
-3. No build do frontend, configurar somente dados públicos necessários. `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY` são os nomes do `.env.example`; o modo sandbox já usa Supabase Auth, sem liberar benefícios ou permissões fictícias. Nunca usar chave privilegiada em `VITE_*`.
+2. Configurar segredos de servidor no ambiente apropriado: chave privilegiada do Supabase, Stripe secret key, segredo do webhook, credenciais da Meta e do Resend. Os nomes exatos serão definidos pela implementação; não existe ainda um conjunto completo de variáveis de produção.
+3. No build do frontend, configurar somente dados públicos necessários. `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY` são os nomes do `.env.test`; o modo sandbox já usa Supabase Auth, sem liberar benefícios ou permissões fictícias. Nunca usar chave privilegiada em `VITE_*`.
 4. Confirmar a hospedagem. Se for Vercel, importar o repositório e usar a raiz da aplicação:
 
    | Diretório raiz na Vercel | Instalação | Build | Saída |
@@ -311,7 +318,7 @@ Depois desse aceite, fazer uma verificação controlada de ponta a ponta em prod
 ## 10. Jornada do cliente final: da contratação ao desconto
 
 1. **Descoberta:** o cliente acessa o domínio oficial, vê parceiros reais, condições do clube e assinatura de R$ 69,60/mês.
-2. **Cadastro:** informa os dados solicitados, confirma maioridade, verifica e-mail e WhatsApp (ou SMS de fallback), envia foto e aceita os documentos aprovados.
+2. **Cadastro:** informa os dados solicitados, confirma maioridade, verifica e-mail e WhatsApp, envia foto e aceita os documentos aprovados.
 3. **Pagamento:** segue para o Checkout da Stripe e conclui o pagamento. Enquanto o backend não confirmar, vê pagamento em processamento e não tem benefício liberado. Se falhar, recebe orientação para regularizar.
 4. **Ativação:** o backend valida o evento, atualiza a elegibilidade e disponibiliza a carteirinha com QR estático revogável. A comunicação de confirmação segue a matriz de mensagens aprovada.
 5. **Acesso recorrente:** escolhe “Login com whatsapp” ou “Login com email”. A sessão do associado persiste com renovação segura; logout, revogação e perda do armazenamento podem exigir novo login.
@@ -330,7 +337,7 @@ Depois desse aceite, fazer uma verificação controlada de ponta a ponta em prod
 | Diária | Financeiro/suporte | Faturas em aberto, tentativas, contatos auditados e divergências com a Stripe |
 | Conforme calendário bancário da conta | Financeiro | Recebimentos, tarifas e repasses efetivos |
 | Semanal | Operação | Parceiros, funcionários ativos e ocorrências no atendimento |
-| Mensal e antes de exceder limites | Responsável pelas contas | Custos, saldo Twilio, franquias, renovação do domínio e capacidade |
+| Mensal e antes de exceder limites | Responsável pelas contas | Custos de mensagens, franquias, renovação do domínio e capacidade |
 | Na periodicidade de recuperação aprovada e após mudanças relevantes | Técnico | Restauração, acessos, revisão de alertas e atualização do procedimento |
 
 Em incidente de cobrança/elegibilidade, suspender o fluxo afetado de novas operações, preservar auditoria e reconciliar com o provedor. Não liberar benefícios editando estados no navegador nem criar outra fatura para compensar uma falha de processamento. Executar o procedimento de recuperação e comunicar os clientes afetados pelo canal aprovado.

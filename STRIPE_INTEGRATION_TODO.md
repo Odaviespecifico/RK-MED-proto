@@ -1,6 +1,10 @@
 # Stripe Checkout — pendências de integração
 
-Cenário A: atualizadas somente as propriedades dos dois objetos de criação de Checkout Session. Este arquivo concentra as pendências desta alteração; a integração continua restrita a testes.
+## Connect Wedea — D27
+
+Repasse condicional implementado no backend; configuração e aceitação externa pendentes. Seguir [docs/wedea-connect.md](docs/wedea-connect.md). Preencher `STRIPE_WEDEA_ACCOUNT_ID`, concluir onboarding/capacidade recipient no sandbox e validar transferências reais de teste antes de publicação. A mensalidade continua usando o Checkout recorrente existente; a divisão ocorre após `invoice.paid`, com decisão persistida e transferência idempotente, sem reversão em reembolsos ou contestações.
+
+Cenário A: atualizados os parâmetros das duas chamadas existentes de Checkout Session. Na continuação da implementação, o vínculo com o Customer do associado foi restabelecido e os testes foram atualizados. Este arquivo concentra as pendências; a integração continua restrita a testes.
 
 ## Values to Replace
 
@@ -38,21 +42,24 @@ Não há parâmetros `sample_only` ausentes nem placeholders literais nas chamad
 | `integration_identifier` | `hosted_mobile_app_0001` |
 | `origin_context` | `mobile_app` |
 
-Foram removidos os parâmetros não presentes nos Field Intents: `customer`, `metadata`, `subscription_data`, `locale` e `client_reference_id`, onde existiam. As opções de transporte/idempotência foram preservadas, assim como a inicialização existente do cliente Stripe e sua versão de API.
+Foram removidos `metadata`, `subscription_data`, `locale` e `client_reference_id`, onde existiam. Na continuação solicitada, `customer: customerId` foi restabelecido no adaptador conectado como exceção à remoção de parâmetros fora dos Field Intents: ele mantém o vínculo já existente entre o pagamento e o associado. O utilitário sintético continua sem Customer prévio. As opções de transporte/idempotência foram preservadas, assim como a inicialização existente do cliente Stripe e sua versão de API.
 
 ## Setup and Next Steps
 
-### Bloqueio funcional antes de aceitar pagamentos
+### Implementação local e aceitação externa
 
-- [ ] Resolver a associação entre Checkout e associado antes de usar o fluxo conectado. A remoção solicitada de `customer` faz o Checkout de assinatura criar outro Customer, enquanto o backend continua salvando e conciliando o Customer criado previamente. Os webhooks resolvem o associado pelo Customer persistido, portanto o novo pagamento não será associado automaticamente ao cadastro. A autorização para restabelecer `customer` nos Field Intents ou uma mudança separada na associação será necessária; essa mudança de fluxo está fora do escopo cirúrgico solicitado.
-- [ ] Atualizar, em tarefa separada, as expectativas dos testes existentes: dois testes ainda exigem ausência de `automatic_tax`; o teste de Checkout sintético também espera o antigo identificador aleatório. Não alterar o payload configurado para satisfazer essas expectativas antigas.
+- [x] Restabelecer `customer` no adaptador conectado para usar o Customer persistido do associado. Teste de regressão com transportes simulados cobre Checkout → evento do provedor → conciliação para o mesmo cadastro; a criação da sessão não ativa benefícios.
+- [x] Atualizar as expectativas antigas de `automatic_tax` e do identificador de integração; verificar os parâmetros do Checkout Studio e a idempotência.
 - [ ] Validar o Checkout hospedado real no sandbox, incluindo `origin_context: mobile_app` no fluxo atual de PWA, antes de considerar o comportamento aceito.
 
 ### Ambiente, chaves e dependências
 
 - [ ] Executar `npm ci` se as dependências ainda não estiverem instaladas. Nenhuma dependência nova é necessária. Node e Edge usam Stripe 23.0.0; se houver downgrade para versão abaixo de 21.0.0, revisar `ui_mode` para `hosted`.
-- [ ] Para as Edge Functions, preencher o arquivo ignorado `supabase/functions/.env` a partir de [supabase/functions/.env.example](supabase/functions/.env.example): `APP_ENV`, `APP_ORIGIN`, `STRIPE_SECRET_KEY`, `STRIPE_TEST_ACCOUNT_ID`, `STRIPE_PRICE_ID` e `STRIPE_WEBHOOK_SECRET`. Usar Price ativo de teste em BRL, 6960 centavos, recorrência mensal e quantidade 1. Configurar `STRIPE_PORTAL_CONFIGURATION_ID` para o portal já existente.
-- [ ] Para os utilitários independentes, executar `npm run stripe:init` e preencher `.env.stripe.local` conforme [.env.stripe.example](.env.stripe.example), com `STRIPE_TEST_ENV`, `STRIPE_TEST_ACCOUNT_ID`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` e `STRIPE_TEST_ORIGIN`. Esse arquivo não configura as Edge Functions.
+- [ ] Executar `npm run env:init` e preencher o arquivo privado `.env.test`: `APP_ENV`, `APP_ORIGIN`, `STRIPE_SECRET_KEY`, `STRIPE_TEST_ACCOUNT_ID`, `STRIPE_PRICE_ID` e `STRIPE_WEBHOOK_SECRET`. Usar Price ativo de teste em BRL, 6960 centavos, recorrência mensal e quantidade 1. Configurar `STRIPE_PORTAL_CONFIGURATION_ID` para o portal já existente.
+- [ ] No mesmo `.env.test`, preencher `STRIPE_TEST_ENV` e `STRIPE_TEST_ORIGIN` para os utilitários independentes. Configurar `STRIPE_CLI_WEBHOOK_SECRET` se o listener da porta 4242 tiver segredo diferente do webhook das funções. Ver [ambientes](docs/ambientes.md).
+
+Diagnóstico local desta continuação: `npm run stripe:doctor` indicou `testKeyConfigured: false`, `expectedAccountConfigured: false`, `webhookSecretConfigured: false` e `remoteConnectionVerified: false` nos utilitários. A aceitação remota depende dessa configuração.
+
 - [ ] Usar credenciais do sandbox esperado, preferencialmente chave restrita de teste com permissões necessárias. Os nomes existentes são consistentes entre código e exemplos; manter segredos sem prefixo `VITE_`. O redirecionamento hospedado atual não precisa de chave publicável no navegador.
 - [ ] Configurar o webhook existente para eventos de Checkout, assinaturas, faturas e risco; conferir assinatura e ambiente. Para testes conectados locais: `npx --no-install stripe listen --forward-to http://127.0.0.1:54321/functions/v1/stripe-webhook`. Usar o segredo emitido por esse listener nas Edge Functions.
 
@@ -60,18 +67,20 @@ Foram removidos os parâmetros não presentes nos Field Intents: `customer`, `me
 
 Único arquivo criado: `STRIPE_INTEGRATION_TODO.md`, na raiz. As duas chamadas existentes foram atualizadas; nenhuma rota, infraestrutura, inicialização, autenticação ou persistência foi adicionada.
 
-O fluxo conectado autentica o associado e verifica contatos, consentimento e foto, reserva a operação, valida conta/preço de teste e cria a sessão. O navegador recebe a URL e redireciona ao Stripe Checkout hospedado; sucesso e cancelamento retornam à cobrança. O retorno nunca ativa benefícios. Os eventos assinados e a conciliação existentes dependem da correção da associação de Customer descrita acima para atualizar o associado correto.
+O fluxo conectado autentica o associado e verifica contatos, consentimento e foto, reserva a operação, valida conta/preço de teste e cria a sessão com o Customer já vinculado ao cadastro. O navegador recebe a URL e redireciona ao Stripe Checkout hospedado; sucesso e cancelamento retornam à cobrança. O retorno nunca ativa benefícios. Os eventos assinados resolvem o Customer persistido e a conciliação consulta a assinatura e a fatura atuais para atualizar o associado correto.
 
 O utilitário independente `npm run stripe:checkout` usa seu catálogo sintético e retorna uma URL de teste. `npm run stripe:webhook` atende os retornos locais e registra recibos sintéticos, sem ativar associados.
 
 ### Testes e operação
 
-Verificação desta alteração: `npm run typecheck` passou. A execução direcionada de `tests/integrations/adapters.test.mjs` e `tests/stripe/sandbox.test.mjs`, com `--test-isolation=none`, terminou com 18 testes aprovados e 2 falhas nas expectativas antigas de ausência de `automatic_tax` (linhas 93 e 100, respectivamente). O teste HTTP passou após permitir a porta local. Nenhuma chamada remota de pagamento foi executada.
+Verificação desta continuação: `npm run typecheck` e `npm run build:sandbox` passaram. A suíte completa de testes Node terminou com 38 aprovados e zero falhas, usando `node --experimental-strip-types --test --test-isolation=none tests/*.test.mjs tests/integrations/*.test.mjs tests/stripe/*.test.mjs`, com permissão para a porta local do receptor HTTP. As expectativas antigas foram corrigidas e o teste de regressão de associação foi adicionado. Nenhuma chamada remota de pagamento foi executada.
 
-- [ ] Executar `npm run typecheck` e os testes Stripe/adaptadores. As expectativas antigas apontadas acima precisam de atualização separada; testes offline não comprovam aceitação pela API.
-- [ ] Após resolver a associação, concluir um Checkout no sandbox com `4242 4242 4242 4242`, validade futura e CVC de teste; usar somente dados sintéticos. Testar cancelamento, falha de pagamento, renovação e reenvio de eventos, verificando associação ao cadastro e idempotência.
+- [x] Executar `npm run typecheck` e `npm run build:sandbox`.
+- [x] Executar a suíte completa de testes Node: 38 aprovados, incluindo vínculo do Customer, idempotência e webhook local.
+- [ ] Com as credenciais configuradas, concluir um Checkout no sandbox com `4242 4242 4242 4242`, validade futura e CVC de teste; usar somente dados sintéticos. Testar cancelamento, falha de pagamento, renovação e reenvio de eventos, verificando associação ao cadastro e idempotência. Testes offline não comprovam aceitação pela API.
+- [ ] Usar um associado sintético novo para aceitar o payload atualizado. Uma sessão pendente já criada conserva o payload anterior; não reutilizar sua chave de idempotência com parâmetros diferentes.
 - [ ] Conferir produtos/preços e eventuais códigos promocionais no mesmo sandbox; validar os efeitos dos descontos na mensalidade antes de habilitá-los para operação real.
-- [ ] Confirmar assinatura/fatura persistidas e elegibilidade derivada de evento verificado, nunca da página de sucesso. Validar rastreamento da operação e prevenção de assinatura duplicada depois da correção da associação.
+- [ ] Confirmar no sandbox assinatura/fatura persistidas e elegibilidade derivada de evento verificado, nunca da página de sucesso. Validar rastreamento da operação e prevenção de assinatura duplicada.
 - [ ] Revisar o tratamento tributário antes de produção: `automatic_tax.enabled` permanece `false`, conforme Checkout Studio. Habilitar Stripe Tax exige configuração própria e registros aplicáveis.
 - [ ] Concluir homologação de provedores e demais critérios de produção do projeto. Nenhum pagamento remoto, deploy ou teste com cartão real faz parte desta alteração.
 

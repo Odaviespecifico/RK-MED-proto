@@ -30,22 +30,27 @@ export function LiveFaceCamera({ onCapture, onClose }: Props) {
         if (!video) return
         video.srcObject = stream
         await video.play()
+        if (!active) return
         detector = await createLiveFaceDetector()
         if (!active) { detector.close(); return }
         setState('ready')
-        function check(now: number) {
+        async function check(now: number) {
           if (!active) return
           if (video && detector && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && now - lastCheck >= 150) {
             lastCheck = now
             try {
-              const detected = countUsableFaces(detector.detectForVideo(video, now).detections, video.videoWidth, video.videoHeight, true)
+              const result = await detector.detectForVideo(video, now)
+              if (!active) return
+              const detected = countUsableFaces(result.detections, video.videoWidth, video.videoHeight, true)
               consecutiveFaceFrames = detected === 1 ? consecutiveFaceFrames + 1 : 0
               const next = detected === 1 && consecutiveFaceFrames < 3 ? 0 : detected
               countRef.current = next
               setCount(previous => previous === next ? previous : next)
             } catch {
+              if (!active) return
               setError('Não foi possível analisar a imagem da câmera. Tente escolher uma foto.')
               setState('error')
+              stream?.getTracks().forEach(track => track.stop())
               return
             }
           }
@@ -57,6 +62,7 @@ export function LiveFaceCamera({ onCapture, onClose }: Props) {
         const permissionDenied = cause instanceof DOMException && (cause.name === 'NotAllowedError' || cause.name === 'PermissionDeniedError')
         setError(permissionDenied ? 'Acesso à câmera negado. Autorize nas configurações do navegador ou escolha uma foto.' : cause instanceof Error ? cause.message : 'Não foi possível abrir a câmera. Escolha uma foto.')
         setState('error')
+        stream?.getTracks().forEach(track => track.stop())
       }
     }
     void start()

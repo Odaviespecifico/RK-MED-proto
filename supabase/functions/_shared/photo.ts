@@ -1,5 +1,6 @@
 import { PublicError } from './http.ts'
-import * as tf from '@tensorflow/tfjs'
+import * as tf from '@tensorflow/tfjs-core'
+import '@tensorflow/tfjs-backend-cpu'
 import { load } from '@tensorflow-models/blazeface'
 import jpeg from 'jpeg-js'
 

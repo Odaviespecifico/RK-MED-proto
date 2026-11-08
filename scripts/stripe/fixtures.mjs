@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { AMOUNT, assertTestObject, SandboxError } from './config.mjs';
 
 function assertPrice(price) {

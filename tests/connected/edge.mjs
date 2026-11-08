@@ -11,5 +11,11 @@ try {
   assert.equal((await call({ action: 'collection' }, session.access_token)).status, 403)
   const webhook = await fetch(`${local.url}/functions/v1/stripe-webhook`, { method: 'POST', body: '{}', signal: AbortSignal.timeout(60000) })
   assert.ok([400, 503].includes(webhook.status))
+  const removedChannel = await fetch(`${local.url}/functions/v1/phone-code`, {
+    method: 'POST', headers,
+    body: JSON.stringify({ action: 'request', contact: '+12025550123', channel: 'whatsapp', purpose: 'login' }),
+    signal: AbortSignal.timeout(60000),
+  })
+  assert.ok([400, 503].includes(removedChannel.status), 'Removed channel must never produce a successful delivery')
   console.log('PASS: Edge Functions locais rejeitam usuário ausente, diretoria privilegiada e webhook sem configuração/assinatura.')
 } finally { await client.auth.signOut() }

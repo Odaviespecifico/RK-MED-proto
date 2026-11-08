@@ -8,7 +8,7 @@ export type PublicConfig = {
 
 export function readPublicConfig(env: Record<string, string | boolean | undefined>): PublicConfig {
   for (const [name, value] of Object.entries(env)) {
-    if (value && name.startsWith('VITE_') && (/SECRET|SERVICE_ROLE|PASSWORD|TOKEN|TWILIO|STRIPE/.test(name))) {
+    if (value && name.startsWith('VITE_') && (/SECRET|SERVICE_ROLE|PASSWORD|TOKEN|TWILIO|STRIPE|SMSDEV|OTP_HMAC/.test(name))) {
       throw new Error('Credencial de servidor encontrada na configuração pública. Remova-a antes de iniciar ou compilar.')
     }
   }

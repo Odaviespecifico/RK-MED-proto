@@ -40,7 +40,7 @@ export function AdminPartners({ data, update, notify, online, viewer }: Props) {
     const partner: Partner = { id: crypto.randomUUID(), name: cleanName, segment: cleanSegment, address: cleanAddress, discount: percent, initials, tone: tones[data.partners.length % tones.length] }
     update({ ...data, partners: [...data.partners, partner] })
     setName(''); setSegment('Laboratório'); setAddress(''); setDiscount('')
-    notify('Parceiro adicionado à demonstração.')
+    notify('Parceiro adicionado.')
   }
 
   return <>

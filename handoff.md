@@ -23,7 +23,7 @@ Credenciais de provedores foram adiadas pelo usuário: preparar estrutura local 
 ## Funcionalidades existentes antes da última rodada
 
 - Auth real local, perfis controlados pelo servidor e sessões da equipe com máximo de 8h/inatividade de 30min. Associado usa sessão persistida com refresh.
-- Cadastro vincula e-mail e telefone na mesma identidade, valida maioridade/CPF e grava aceite versionado. Reenvio de OTP e fallback SMS adicionados à UI, entrega externa ainda não homologada.
+- Cadastro vincula e-mail e telefone na mesma identidade, valida maioridade/CPF e grava aceite versionado. Reenvio de OTP pelo mesmo canal disponível; SMS removido em 04/11/2026. Entrega via Meta ainda depende da migração D26 e de homologação externa.
 - Fotos privadas: 600×600 JPEG, detecção de um rosto no backend com modelo local, reencodificação sem metadados. Não é identificação ou prova de vivacidade.
 - QR estático opaco; balcão com código de funcionário por sessão, QR/CPF exato, confirmação de foto, cálculo no banco, recibo temporário e compra atômica/idempotente. Estorno vinculado e auditado.
 - Administração: associados/bloqueios, parceiros, funcionários, criação de acessos somente pelo admin, cobrança com confirmação e fila de comunicações. Diretoria somente leitura e sem contatos/fotos/exportação.
@@ -154,12 +154,12 @@ npm run test:performance
 
 As contas sintéticas e a senha comum de desenvolvimento estão em `docs/homologacao.md`. Contas usadas nesta rodada: `diretoria@rkmed.test` e `suporte@rkmed.test`. Fixture de associado principal: `ana@rkmed.test`. Não copiar seed/OTP fixo/senha comum para produção.
 
-Arquivos ignorados existentes: `.env.local`, `.env.stripe.local`, `supabase/functions/.env`. Não presumir que possuem credenciais externas. `scripts/dev/local.mjs` obtém status local sem imprimir segredos; `supabase status -o json` contém credenciais e não deve ser exibido.
+Arquivos de ambiente: somente `.env.test` e `.env.prod` na raiz, ambos ignorados pelo Git. Ver [ambientes](docs/ambientes.md). Não presumir credenciais completas. `scripts/dev/local.mjs` obtém status local sem imprimir segredos; `supabase status -o json` contém credenciais e não deve ser exibido.
 
 ## Pendências externas e de lançamento
 
 - Configurar contas/chaves sandbox autorizadas, hooks Auth, webhook Stripe, portal, recuperação D+0/1/3 e agendamento do worker. Stripe MCP planner não estava disponível; fallback oficial de skills já foi instalado anteriormente.
-- Homologar aquisição, renovação, falha, recuperação, cancelamento e entrega real de WhatsApp/SMS/e-mail.
+- Homologar aquisição, renovação, falha, recuperação, cancelamento e entrega real de WhatsApp/e-mail.
 - Aprovar textos legais reais e políticas de operação/privacidade. Os mocks têm aviso obrigatório e não equivalem a consentimento de produção.
 - Validar câmera, instalação, atualização e offline em Android/iPhone físicos via HTTPS.
 - Preparar e testar configuração de produção, backup/restauração, alertas, rollback e monitoramento antes de qualquer publicação.

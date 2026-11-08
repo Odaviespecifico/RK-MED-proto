@@ -34,4 +34,4 @@ O parceiro de teste {{parceiro}} está sem registros há {{dias}} dias. Consulte
 
 ## Código de acesso
 
-Seu código temporário de teste é {{otp}}. Não compartilhe. Se você não solicitou o acesso, ignore esta mensagem. A verificação prevê e-mail e WhatsApp/SMS via Twilio; no primeiro cadastro, confirmar e-mail e telefone; depois, um deles é suficiente. SMS é a alternativa de entrega quando o WhatsApp falhar.
+Seu código temporário de teste é {{otp}}. Não compartilhe. Se você não solicitou o acesso, ignore esta mensagem. A verificação prevê e-mail e SMS pelo provedor configurado no Supabase Auth; no primeiro cadastro, confirmar e-mail e telefone; depois, um deles é suficiente. Se o código não chegar, solicite um novo código pelo mesmo canal.

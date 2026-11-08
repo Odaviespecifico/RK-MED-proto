@@ -6,7 +6,7 @@ export function createDemoAuth(data: DemoState): MemberAuth {
   return {
     async requestCode() { /* Demonstration transport: deliberately no messages or provider requests. */ },
     async verifyCode({ channel, contact, token }) {
-      if (token !== DEMO_OTP) throw new Error('Código incorreto. Neste protótipo, use 123456.')
+      if (token !== DEMO_OTP) throw new Error('Código incorreto. Use o código de teste 123456.')
       const member = data.members.find(item => channel === 'email'
         ? item.email.toLowerCase() === contact.trim().toLowerCase()
         : onlyDigits(item.phone) === onlyDigits(contact))

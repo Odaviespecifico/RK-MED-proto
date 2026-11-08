@@ -1,8 +1,55 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { subscriptionSnapshot, processEvent } from '../../supabase/functions/_shared/billing.ts'
+import { checkout, subscriptionSnapshot, processEvent } from '../../supabase/functions/_shared/billing.ts'
 const subscription = { id: 'sub_test', livemode: false, status: 'active', cancel_at_period_end: true, items: { data: [{ price: { id: 'price_test', currency: 'brl', unit_amount: 6960, recurring: { interval: 'month' } }, quantity: 1, current_period_end: 1900000000 }] } }
 const invoice = { id: 'in_test', livemode: false, status: 'paid', attempted: true, amount_remaining: 0 }
+test('RF-PAG: Checkout payment reconciles to the persisted member Customer only after a provider event', async () => {
+  const memberId = '00000000-0000-4000-8000-000000000001'
+  const operationId = '00000000-0000-4000-8000-000000000002'
+  const env = { APP_ENV: 'local', APP_ORIGIN: 'http://127.0.0.1:5174', STRIPE_SECRET_KEY: 'rk_test_synthetic', STRIPE_TEST_ACCOUNT_ID: 'acct_test', STRIPE_PRICE_ID: 'price_test' }
+  let savedCustomer = null
+  let sessionCustomer = null
+  const applied = []
+  const db = {
+    storage: { from: () => ({ download: async () => ({ data: { size: 1 }, error: null }) }) },
+    rpc: async (name, args) => {
+      let data = null
+      if (name === 'rk_backend_member') data = { id: memberId, name: 'Teste', email: 'member@example.invalid', phone: '+5581999990001', verified: true, consented: true, photoPath: 'test/photo.jpg', customerId: savedCustomer }
+      else if (name === 'rk_checkout_begin') data = { status: 'pending', operationId }
+      else if (name === 'rk_backend_customer') savedCustomer = args.p_customer
+      else if (name === 'rk_checkout_finish') assert.equal(args.p_session, 'cs_test_member')
+      else if (name === 'rk_event_record') data = 'pending'
+      else if (name === 'rk_sync_claim') data = args.p_customer === savedCustomer ? memberId : null
+      else if (name === 'rk_sync_apply') applied.push(args)
+      else if (name !== 'rk_event_finish') assert.fail(`Unexpected RPC: ${name}`)
+      return { data, error: null }
+    },
+  }
+  let paid = false
+  const stripe = {
+    accounts: { retrieve: async () => ({ id: 'acct_test' }) },
+    prices: { retrieve: async () => ({ ...subscription.items.data[0].price, livemode: false, active: true, recurring: { interval: 'month', interval_count: 1 } }) },
+    customers: { create: async () => ({ id: 'cus_member', livemode: false }) },
+    checkout: { sessions: {
+      create: async params => {
+        sessionCustomer = params.customer
+        return { id: 'cs_test_member', url: 'https://checkout.stripe.com/test', livemode: false }
+      },
+      retrieve: async () => ({ customer: sessionCustomer }),
+    } },
+    subscriptions: { list: async ({ customer }) => ({ has_more: false, data: paid && customer === sessionCustomer ? [{ ...subscription, latest_invoice: 'in_test', created: 1 }] : [] }) },
+    invoices: { retrieve: async () => ({ ...invoice, customer: sessionCustomer }) },
+  }
+  await checkout(db, stripe, env, memberId, operationId)
+  assert.equal(savedCustomer, 'cus_member')
+  assert.equal(sessionCustomer, savedCustomer)
+  assert.deepEqual(applied, [])
+  paid = true
+  await processEvent(db, stripe, env, { id: 'evt_checkout_member', type: 'checkout.session.completed', livemode: false, created: 1, data: { object: { id: 'cs_test_member' } } })
+  assert.equal(applied.length, 1)
+  assert.equal(applied[0].p_member, memberId)
+  assert.equal(applied[0].p_state, 'active')
+})
 test('RF-PAG: only paid current invoice grants benefits; failure overrides active and scheduled cancellation', () => {
   assert.equal(subscriptionSnapshot(subscription, invoice, 'price_test').state, 'active')
   const failed = subscriptionSnapshot(subscription, { ...invoice, status: 'open', amount_remaining: 6960 }, 'price_test')

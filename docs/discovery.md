@@ -1,5 +1,7 @@
 # Discovery interview and answers
 
+Atualização de 04/11/2026 (D26 em `plan.md`): o usuário substituiu Twilio pela API oficial da Meta e removeu a alternativa por SMS. As respostas anteriores abaixo são históricas.
+
 Answers recorded 2026-10-06. Answer by number; `recommend a default` is valid for an undecided item. These questions guide implementation and do not block unrelated local setup.
 
 ## Answered in the first round

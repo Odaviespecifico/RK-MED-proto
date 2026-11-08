@@ -258,7 +258,8 @@ otp_expiry = 3600
 [auth.sms]
 # Reserved local-only phone OTP fixture. No external messages are sent.
 # Phone signup stays disabled until a local delivery hook is implemented and tested.
-# Production WhatsApp/SMS uses Twilio; provider credentials and local fake remain unconfigured.
+# Phone OTP delivery is WhatsApp only (Meta migration pending, D26).
+# The auth.sms namespace/test fixtures are Supabase protocol names, not an SMS fallback.
 enable_signup = false
 enable_confirmations = true
 template = "Seu código RKMED é {{ .Code }}"

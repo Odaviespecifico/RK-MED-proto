@@ -11,6 +11,7 @@ import { PageControls } from '../../components/PageControls'
 import { mergeHistory, savedHistoryPage, type PageCursor } from '../../lib/pagination'
 import { useCursorPage } from '../../lib/useCursorPage'
 import { reportMoney } from '../../lib/reports'
+import { MemberInstallPrompt } from '../../components/MemberInstallPrompt'
 
 export function ConnectedMember({ api, member, partners, online, refresh, snapshot }: { api: Portal; member: PortalMember; partners: PublicPartner[]; online: boolean; refresh: () => Promise<void>; snapshot?: MemberSnapshot }) {
   const [qr, setQr] = useState('')
@@ -64,7 +65,7 @@ export function ConnectedMember({ api, member, partners, online, refresh, snapsh
       else { setConfirmCancel(false); await refresh() }
     } catch (e) { setError(e instanceof Error ? e.message : 'Não foi possível concluir.') } finally { setBusy(false) }
   }
-  return <><div className="welcome-row"><div><h1>Olá, {member.name.split(' ')[0]}.</h1><p>Seu cartão e seus benefícios em um só lugar.</p></div></div>
+  return <><MemberInstallPrompt /><div className="welcome-row"><div><h1>Olá, {member.name.split(' ')[0]}.</h1><p>Seu cartão e seus benefícios em um só lugar.</p></div></div>
     {!online && <p className="member-note" role="status">Você está offline. Última sincronização: {snapshot ? new Date(snapshot.syncedAt).toLocaleString('pt-BR', { timeZone: 'America/Recife' }) : 'indisponível'}. A situação salva não comprova direito ao benefício; o parceiro faz a validação online.</p>}
     {error && <p role="alert" className="inline-error">{error}</p>}
     <div className="member-overview"><section className="member-card-block"><div className="digital-card"><div className="digital-card-top"><Brand /><span>LINHA GOLD</span></div><div className="digital-card-center"><span>Seu cuidado.<br />Sua economia.</span><span className="card-flower">✳</span></div><div className="digital-card-bottom"><span><small>ASSOCIADO</small><b>{member.name}</b><small>{member.cpf}</small></span></div></div><div className="qr-panel"><h2>Seu cartão digital</h2><p>{member.eligible ? 'Situação atual: benefício disponível.' : 'Benefício indisponível. Consulte sua assinatura.'}</p>{qr && <div className="qr-wrap"><img className="qr-img" src={qr} alt="QR do cartão do associado" /></div>}<p>O parceiro confere sua foto e a situação da assinatura antes de registrar a compra.</p></div></section>

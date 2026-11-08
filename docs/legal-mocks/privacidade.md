@@ -6,7 +6,7 @@ Versão: `mock-2026-10-06`. Utilizar somente dados fictícios.
 
 Controlador: [DEFINIR RESPONSÁVEL LEGAL]. Contato: privacidade@example.invalid.
 
-O protótipo prevê nome, CPF, data de nascimento, contatos, foto, registros de aceite, situação da assinatura e valores de compras/descontos. Não prevê diagnóstico, prontuário ou categoria de exame. A senha de uso permanente por PIN foi removida; o primeiro cadastro exige verificação por código no e-mail e no telefone (WhatsApp via Twilio, com SMS como alternativa de entrega). Depois, o acesso pode usar um desses contatos verificados.
+O protótipo prevê nome, CPF, data de nascimento, contatos, foto, registros de aceite, situação da assinatura e valores de compras/descontos. Não prevê diagnóstico, prontuário ou categoria de exame. A senha de uso permanente por PIN foi removida; o primeiro cadastro exige verificação por código no e-mail e no telefone (SMS pela API oficial da Meta, integração pendente, sem alternativa por SMS). Depois, o acesso pode usar um desses contatos verificados.
 
 Os dados simulados permitem testar adesão, autenticação, cobrança, conferência visual no parceiro, registro de descontos e suporte. O parceiro recebe somente as informações necessárias para o atendimento autorizado. Administração, suporte RK e diretoria têm permissões distintas; O CPF completo não é exibido para operadores, inclusive administradores; a busca exata autorizada retorna apenas uma versão mascarada.
 
