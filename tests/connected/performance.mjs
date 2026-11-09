@@ -47,8 +47,8 @@ try {
   await checkedAll(Array.from({ length: 10 }, async () => {
     while (index < 200) { const current = index++; const page = await measured('pages', tasks[current % tasks.length]); assert.ok(page.items.length <= 25) }
   }))
-  await rpc(partner1, 'rk_start_work', { p_code: '2468' })
-  await rpc(partner2, 'rk_start_work', { p_code: '1357' })
+  await rpc(partner1, 'rk_start_work', { p_code: '2468', p_establishment_code: await establishmentCode(local, partner1) })
+  await rpc(partner2, 'rk_start_work', { p_code: '1357', p_establishment_code: await establishmentCode(local, partner2) })
   const requests = Array.from({ length: 50 }, (_, i) => ({ client: i % 2 ? partner1 : partner2, operation: crypto.randomUUID() }))
   const receipts = await checkedAll(requests.map(r => measured('lookups', () => rpc(r.client, 'rk_validate_member', { p_lookup: fixture.cpf, p_method: 'cpf' }))))
   const quotes = await checkedAll(requests.map((r, i) => measured('quotes', () => rpc(r.client, 'rk_quote', { p_receipt: receipts[i].receipt, p_gross: 10000 }))))

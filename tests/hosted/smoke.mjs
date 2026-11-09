@@ -16,6 +16,9 @@ for (const rpc of ['rk_context', 'rk_admin_overview', 'rk_member_economy', 'rk_s
   const response = await fetch(`${backend}/rest/v1/rpc/${rpc}`, { method: 'POST', headers, body: '{}' })
   assert.ok([401, 403].includes(response.status), `${rpc} recusado sem sessão`)
 }
+const work = await fetch(`${backend}/rest/v1/rpc/rk_start_work`, { method: 'POST', headers,
+  body: JSON.stringify({ p_code: '0000', p_establishment_code: 'INVALID000' }) })
+assert.ok([401, 403].includes(work.status), 'Início de turno exige sessão autorizada')
 const browser = await chromium.launch({ executablePath: '/usr/bin/brave-browser', headless: true, args: ['--no-sandbox', '--disable-gpu'] })
 try {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' })

@@ -7,6 +7,7 @@ import { PurchaseHistory } from './PurchaseHistory'
 
 export function ConnectedCounter({ api, context, refresh, online }: { api: Portal; context: PortalContext; refresh: () => Promise<void>; online: boolean }) {
   const [code, setCode] = useState('')
+  const [establishmentCode, setEstablishmentCode] = useState('')
   const [method, setMethod] = useState<'qr' | 'cpf'>('qr')
   const [lookup, setLookup] = useState('')
   const [member, setMember] = useState<Validation | null>(null)
@@ -53,7 +54,7 @@ export function ConnectedCounter({ api, context, refresh, online }: { api: Porta
       if (result.photoPath && result.eligible) setPhoto(await api.photo(result.photoPath))
     })
   }
-  if (!context.workSession) return <section className="surface-card counter-flow"><h1>Iniciar atendimento</h1><p>Informe seu código de funcionário neste estabelecimento.</p><form onSubmit={e => { e.preventDefault(); void run(async () => { await api.startWork(code); setCode(''); await refresh() }) }}><label className="field-label">Código do funcionário<input className="input" type="password" inputMode="numeric" autoComplete="off" value={code} onChange={e => setCode(onlyDigits(e.target.value))} required minLength={4} maxLength={12} /></label><Button disabled={!online || busy} type="submit">Iniciar atendimento</Button></form>{error && <p className="inline-error" role="alert">{error}</p>}</section>
+  if (!context.workSession) return <section className="surface-card counter-flow"><h1>Iniciar atendimento</h1><p>Informe o código do estabelecimento e seu código de funcionário.</p><form onSubmit={e => { e.preventDefault(); void run(async () => { await api.startWork(code, establishmentCode); setCode(''); setEstablishmentCode(''); await refresh() }) }}><label className="field-label">Código do estabelecimento<input className="input" value={establishmentCode} onChange={e => setEstablishmentCode(e.target.value.toUpperCase())} autoComplete="off" autoCapitalize="characters" spellCheck={false} required minLength={10} maxLength={10} /></label><label className="field-label">Código do funcionário<input className="input" type="password" inputMode="numeric" autoComplete="off" value={code} onChange={e => setCode(onlyDigits(e.target.value))} required minLength={4} maxLength={12} /></label><Button disabled={!online || busy} type="submit">Iniciar atendimento</Button></form>{error && <p className="inline-error" role="alert">{error}</p>}</section>
   return <><div className="welcome-row"><div><h1>Balcão de atendimento</h1><p>Funcionário: {context.workSession.employeeName}</p></div><Button variant="outline" disabled={!online || busy} onClick={() => void run(async () => { await api.endWork(); setMember(null); setPhoto(null); setQuote(null); await refresh() })}>Trocar funcionário</Button></div>
     {!online && <p role="alert" className="inline-error">Conecte-se para validar cartões e registrar compras.</p>}
     {error && <p role="alert" className="inline-error">{error}</p>}{notice && <p role="status" className="inline-success">{notice}</p>}

@@ -341,3 +341,27 @@ Verificação D32: `phone-code` v11 e `provider-jobs` v8 publicados; ambos os ca
 PWA: `node tests/pwa-update.mjs` passou com service worker real, aviso de nova versão e recarga após confirmação. Scan final de código/documentação/testes sem credenciais privadas configuradas; `git diff --check` aprovado. Recibo imediato ClickSend retornou NOT_FOUND (ainda não é prova de entrega física).
 
 **Aceite do usuário — 09/11/2026:** SMS de teste recebido no aparelho. Entrega real ClickSend validada. Isso não substitui a conclusão do cadastro integrado e o aceite do ciclo Stripe hospedado.
+
+
+## D33 — Entrada por código do estabelecimento — 2026-11-09
+
+Solicitação explícita do usuário: funcionário informa código de estabelecimento em vez de escolher uma unidade livremente. Implementado no início de turno conectado e na demonstração: código do estabelecimento + código do funcionário, sem seletor. Conta compartilhada e sessão autenticada do parceiro permanecem obrigatórias no fluxo real; um código de outro estabelecimento nunca muda o vínculo autorizado.
+
+Migration `20261109180612_establishment_entry_code`: código alfanumérico único de dez caracteres, gerado pelo banco para parceiros existentes/novos; RPC de início exige os dois códigos e mantém limites/auditoria. Assinatura antiga sem estabelecimento removida. O código identifica a unidade e não substitui senha nem autorização. Diretório público e diretoria não recebem o código; administração/suporte consultam em Parceiros. Troca de funcionário encerra o turno e exige os dois códigos novamente. Compras históricas preservam atribuição.
+
+Verificado localmente: typecheck, builds conectado/demo, 65 testes Node, 253 verificações pgTAP e lint SQL aprovados. Testes HTTP reais de compra/estorno e navegador conectado passaram. Demonstração validou criação de parceiro/funcionário, recusa de par incorreto, ausência de seleção e histórico restrito. Helper local passou a encerrar apenas sua própria sessão de suporte para não desconectar outras fixtures. Migration aplicada ao Supabase hospedado sem seeds/reset; total de 18 migrations. Publicação Vercel `dpl_3AdouKnkkE3mfoVHPT6VMQicMc28` confirmada READY no domínio estável.
+
+Verificação hospedada D33: smoke HTTPS aprovado, início de turno negado sem sessão e geração automática/ausência de código no diretório público confirmadas em transação revertida. Nenhum parceiro sintético permaneceu no banco remoto.
+
+
+## D34 — Mapas interativos nas visões de parceiros — 2026-11-09
+
+Solicitação explícita do usuário: consultar os parceiros em mapa interativo dentro do sistema nas suas visões. Adicionado componente compartilhado de localização, com ação Ver no mapa em cartões/listas da landing, associado, gestão conectada/demo, atalhos demo e identificação do próprio parceiro no balcão. Os mapas abrem no local, sem navegar para fora do app; o link externo permanece opcional. A seleção da rede no mapa agregado continua disponível.
+
+O endereço cadastrado determina a pesquisa. A chave Google Maps Embed existente é usada quando configurada; sem ela, o mapa público incorporado por endereço substitui o antigo placeholder. Verificação real do iframe confirmou carregamento e 13 controles interativos sem chave. Não há geocodificação própria, alteração no schema ou cadastro de fornecedor. Nenhuma credencial ou código de estabelecimento/funcionário é enviado ao mapa.
+
+Mapas individuais carregam somente ao expandir, são desmontados ao fechar e não fazem parte do cache offline. Offline apresenta reconexão/endereço sem iframe. Endereço vazio recebe mensagem explícita. Mantidos estados de carregamento/falha, teclado, títulos por parceiro e layout de 360px.
+
+Verificado: typecheck, 68 testes Node, builds hospedado/demo, teste de mapas em navegador nas áreas pública/admin/associado/parceiro (transporte do provedor isolado), teste conectado de balcão e teste real separado do iframe Google. Publicação Vercel `dpl_DsngysE9taxsnDcoHUFBtdCQphwN` confirmada READY no domínio estável. Banco/funções/provedores de pagamento e mensagens não foram alterados.
+
+D34 hospedado: smoke HTTPS aprovado e iframe real conferido no domínio publicado a 360px, com mapa/ruas e 13 controles Google. O parceiro usado nessa verificação foi injetado somente na resposta do navegador, sem escrita no banco. Captura visual confirmou mapa dentro do cartão e ausência de overflow.

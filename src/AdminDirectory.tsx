@@ -1,3 +1,4 @@
+import { PartnerLocation } from './components/PartnerLocation'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { CircleAlert, MapPin, Plus, Users } from 'lucide-react'
@@ -37,7 +38,7 @@ export function AdminPartners({ data, update, notify, online, viewer }: Props) {
     if (data.partners.some(item => item.name.localeCompare(cleanName, 'pt-BR', { sensitivity: 'base' }) === 0)) return setError('Já existe um parceiro com este nome.')
     const initials = cleanName.split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase()
     const tones = ['sage', 'sand', 'rose', 'blue']
-    const partner: Partner = { id: crypto.randomUUID(), name: cleanName, segment: cleanSegment, address: cleanAddress, discount: percent, initials, tone: tones[data.partners.length % tones.length] }
+    const partner: Partner = { id: crypto.randomUUID(), establishmentCode: crypto.randomUUID().replaceAll('-', '').slice(0, 10).toUpperCase(), name: cleanName, segment: cleanSegment, address: cleanAddress, discount: percent, initials, tone: tones[data.partners.length % tones.length] }
     update({ ...data, partners: [...data.partners, partner] })
     setName(''); setSegment('Laboratório'); setAddress(''); setDiscount('')
     notify('Parceiro adicionado.')
@@ -58,8 +59,8 @@ export function AdminPartners({ data, update, notify, online, viewer }: Props) {
     </form>}
     <div className="management-list" aria-label="Parceiros cadastrados">{data.partners.map(partner => <article className="surface-card management-row" key={partner.id}>
       <span className={`partner-logo tone-${partner.tone}`} aria-hidden="true">{partner.initials}</span>
-      <div><h2>{partner.name}</h2><p>{partner.segment} · {partner.address}</p><small>{data.employees.filter(employee => employee.partnerId === partner.id && employee.active).length} funcionário(s) ativo(s)</small></div>
-      <strong>{partner.discount}% de desconto</strong>
+      <div><h2>{partner.name}</h2><p>{partner.segment} · {partner.address}</p>{!viewer && <small>Código do estabelecimento: <code>{partner.establishmentCode}</code></small>}<small>{data.employees.filter(employee => employee.partnerId === partner.id && employee.active).length} funcionário(s) ativo(s)</small></div>
+      <strong>{partner.discount}% de desconto</strong><PartnerLocation partner={partner} />
     </article>)}</div>
   </>
 }

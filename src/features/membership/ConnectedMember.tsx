@@ -1,3 +1,4 @@
+import { PartnerLocation } from '../../components/PartnerLocation'
 import { useCallback, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import QRCode from 'qrcode'
@@ -118,7 +119,7 @@ export function ConnectedMember({ api, member, partners, online, refresh, snapsh
     </>}
     {section === 'parceiros' && <>
       <div className="welcome-row"><div><h1>Parceiros</h1><p>Consulte a rede credenciada, os descontos e os endereços.</p></div></div>
-      <section className="surface-card counter-flow"><div className="small-section-head"><h2>Rede credenciada</h2><small>{partners.length} parceiro(s)</small></div>{partners.length ? partners.map(p => <div className="dash-row" key={p.id}><span><b>{p.name}</b><small>{p.segment} · {p.address}</small></span><strong>{p.discount}%</strong></div>) : <p className="empty-copy">Nenhum parceiro disponível.</p>}</section>
+      <section className="surface-card counter-flow"><div className="small-section-head"><h2>Rede credenciada</h2><small>{partners.length} parceiro(s)</small></div>{partners.length ? partners.map(p => <article className="partner-directory-entry" key={p.id}><div className="dash-row"><span><b>{p.name}</b><small>{p.segment} · {p.address}</small></span><strong>{p.discount}%</strong></div><PartnerLocation partner={p} /></article>) : <p className="empty-copy">Nenhum parceiro disponível.</p>}</section>
       <PartnerMap partners={partners} />
     </>}
     {section === 'economia' && <>

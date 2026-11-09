@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { localClients, login } from '../../scripts/dev/local.mjs'
+import { localClients, login, establishmentCode } from '../../scripts/dev/local.mjs'
 const local = localClients()
 async function rpc(client, name, params) { const { data, error } = await client.rpc(name, params); assert.equal(error, null, `${name}: ${error?.message}`); return data }
 const [member, partner, other, support, viewer] = await Promise.all(['ana@rkmed.test', 'parceiro@rkmed.test', 'outro-parceiro@rkmed.test', 'suporte@rkmed.test', 'diretoria@rkmed.test'].map(email => login(local, email)))
@@ -15,7 +15,7 @@ try {
   assert.equal(ownPhoto.error, null, `Foto própria: ${ownPhoto.error?.message}`)
   const wrongPhoto = await other.storage.from('member-photos').createSignedUrl(context.member.photoPath, 60)
   assert.ok(wrongPhoto.error, 'Foto não pode ser acessada por outro parceiro')
-  await rpc(partner, 'rk_start_work', { p_code: '2468' })
+  await rpc(partner, 'rk_start_work', { p_code: '2468', p_establishment_code: await establishmentCode(local, partner) })
   const validation = await rpc(partner, 'rk_validate_member', { p_lookup: context.member.cardToken, p_method: 'qr' })
   assert.equal(validation.eligible, true)
   const photo = await partner.storage.from('member-photos').createSignedUrl(validation.photoPath, 60)

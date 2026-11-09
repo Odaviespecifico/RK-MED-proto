@@ -2,7 +2,7 @@
 
 **Resultado:** homologação publicada e conectada ao banco real. Produção comercial ainda não liberada.
 
-Frontend: https://rk-med-proto.vercel.app — deploy `dpl_FP6woehta7pYaFYpKL5hcmxcdE1J`. Backend: projeto Supabase `chuyompxoctmpawhfmyb`, ambiente `sandbox`, 17 migrations. A publicação usa o conteúdo atual do workspace; nenhuma alteração foi commitada/enviada ao GitHub nesta rodada.
+Frontend: https://rk-med-proto.vercel.app — deploy `dpl_DsngysE9taxsnDcoHUFBtdCQphwN`. Backend: projeto Supabase `chuyompxoctmpawhfmyb`, ambiente `sandbox`, 18 migrations. A publicação usa o conteúdo atual do workspace; nenhuma alteração foi commitada/enviada ao GitHub nesta rodada.
 
 ## Entregue e verificado
 
@@ -11,7 +11,7 @@ Frontend: https://rk-med-proto.vercel.app — deploy `dpl_FP6woehta7pYaFYpKL5hcm
 - Publicação das seis funções e configuração de OTP, ClickSend, Resend, Stripe de teste e worker. CPF protegido, fotos privadas e permissões permanecem no servidor.
 - Conta e preço Stripe conferidos: R$ 69,90/mês, modo teste. Webhook criado com dez eventos, assinatura verificada por evento sem efeito financeiro. Worker respondeu HTTP 200 sem falhas e foi agendado a cada cinco minutos com bearer no Vault.
 - Credencial ClickSend autenticada; um SMS de teste foi aceito com status individual SUCCESS e o usuário confirmou recebimento no aparelho. Homologação liberada para qualquer e-mail/celular brasileiro por autorização explícita do usuário (D32). Backend hospedado aceitou uma solicitação de OTP de e-mail; usuário confirmou recebimento de e-mails de teste.
-- Typecheck, 64 testes Node, lint SQL e 235 verificações pgTAP passaram. Testes locais de API, OTP/sessão, cadastro/foto, Edge, UI e PWA offline passaram. Atualização real do service worker também foi testada: aviso, confirmação e recarga da versão nova. Smoke HTTPS comprovou chamadas ao projeto correto, rotas, ausência de mocks, recusa de RPCs privadas e erro visível em falha da rede de parceiros.
+- Typecheck, 68 testes Node, lint SQL e 253 verificações pgTAP passaram. Testes locais de API, OTP/sessão, cadastro/foto, Edge, UI e PWA offline passaram. Atualização real do service worker também foi testada: aviso, confirmação e recarga da versão nova. Smoke HTTPS comprovou chamadas ao projeto correto, rotas, ausência de mocks, recusa de RPCs privadas e erro visível em falha da rede de parceiros.
 
 O banco hospedado começou e terminou a verificação sem associados, parceiros ou assinaturas. Cadastrar a operação pelo administrador existente; telas vazias são esperadas. Os testes com fixtures pagas ocorreram exclusivamente no Docker local.
 
@@ -32,3 +32,7 @@ O banco hospedado começou e terminou a verificação sem associados, parceiros 
 - Validar desempenho hospedado e configuração fiscal com os responsáveis. Stripe Tax continua desabilitado; nenhum registro fiscal foi presumido.
 
 Critério de liberação: todos os itens de aceite e bloqueios acima precisam de evidência. Não usar o sucesso de testes locais ou o deploy da Vercel como substituto dessa validação.
+
+D33: início de turno exige código do estabelecimento e do funcionário, com validação contra o parceiro autenticado. Códigos visíveis somente na gestão autorizada de parceiros; seleção livre removida.
+
+D34: mapas incorporados por endereço disponíveis nas visões de parceiros, com expansão individual, controles interativos, comportamento offline e carregamento sob demanda. Precisão depende do endereço informado e do provedor.

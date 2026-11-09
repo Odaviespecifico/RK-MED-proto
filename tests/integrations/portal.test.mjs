@@ -10,3 +10,10 @@ test('offline fallback distinguishes lost transport from expired sessions and de
     await assert.rejects(denied.context(), error => !(error instanceof PortalConnectionError))
   }
 })
+
+test('work entry sends the establishment code and employee code without selecting a partner id', async () => {
+  let captured
+  const api = portal({ rpc: async (name, params) => { captured = { name, params }; return { data: { role: 'partner' }, status: 200, error: null } } })
+  await api.startWork('2468', ' ab12345678 ')
+  assert.deepEqual(captured, { name: 'rk_start_work', params: { p_code: '2468', p_establishment_code: 'AB12345678' } })
+})

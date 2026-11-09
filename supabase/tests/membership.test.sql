@@ -3,6 +3,8 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path=public,extensions;
 select no_plan();
+select set_config('rkmed.test.establishment1',(select entry_code from private.partners where id='10000000-0000-4000-8000-000000000001'),true);
+select set_config('rkmed.test.establishment2',(select entry_code from private.partners where id='10000000-0000-4000-8000-000000000002'),true);
 select set_config('rkmed.test.purchase_baseline',(select count(*)::text from private.purchases where partner_id='10000000-0000-4000-8000-000000000001'),true);
 
 insert into auth.sessions(id,user_id,created_at,updated_at,aal)
@@ -24,14 +26,14 @@ set local role authenticated;
 select is(public.rk_context()->>'role','member','Editable metadata does not grant administration');
 select is(public.rk_context()->'member'->>'cpf','***.***.***-09','Member projection returns masked CPF');
 select throws_ok('select public.rk_admin_members()','42501','Acesso negado','Member cannot list other members');
-select throws_ok('select public.rk_start_work(''2468'')','42501','Acesso negado','Member cannot establish a partner work session');
+select throws_ok('select public.rk_start_work(''2468'',current_setting(''rkmed.test.establishment1''))','42501','Acesso negado','Member cannot establish a partner work session');
 select throws_ok('select * from private.member_identity','42501',null,'Direct private reads are denied');
 reset role;
 
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000003","role":"authenticated","session_id":"30000000-0000-4000-8000-000000000003"}',true);
 set local role authenticated;
-select ok(public.rk_start_work('1357') ? 'error','Employee code from another partner is rejected');
-select is(public.rk_start_work('2468')->'workSession'->>'employeeName','Marina — TESTE','Valid employee is bound to a server work session');
+select ok(public.rk_start_work('1357',current_setting('rkmed.test.establishment1')) ? 'error','Employee code from another partner is rejected');
+select is(public.rk_start_work('2468',current_setting('rkmed.test.establishment1'))->'workSession'->>'employeeName','Marina — TESTE','Valid employee is bound to a server work session');
 select is(public.rk_validate_member('98765432100','cpf')->>'eligible','false','Blocked member is ineligible');
 select is(public.rk_validate_member('98765432100','cpf')->>'receipt',null::text,'Blocked member receives no purchase receipt');
 select set_config('rkmed.test.receipt',public.rk_validate_member('12345678909','cpf')->>'receipt',true);
@@ -59,7 +61,7 @@ update private.members set blocked=false where id='00000000-0000-4000-8000-00000
 
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000004","role":"authenticated","session_id":"30000000-0000-4000-8000-000000000004"}',true);
 set local role authenticated;
-select is(public.rk_start_work('1357')->'workSession'->>'employeeName','Pedro — TESTE','Second partner has its own employee');
+select is(public.rk_start_work('1357',current_setting('rkmed.test.establishment2'))->'workSession'->>'employeeName','Pedro — TESTE','Second partner has its own employee');
 select is((select count(*) from jsonb_array_elements(public.rk_purchases()) p where p->>'partnerId'<>'10000000-0000-4000-8000-000000000002'),0::bigint,'Second partner cannot read first partner purchases');
 select throws_ok(format('select public.rk_commit_purchase(%L,20000,%L,1000)',current_setting('rkmed.test.second_receipt'),'40000000-0000-4000-8000-000000000004'),
   '42501','Validação expirada ou inválida','Receipt cannot cross partner or session');

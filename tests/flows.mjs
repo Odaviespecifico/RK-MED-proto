@@ -52,6 +52,7 @@ try {
   await page.goto(`${origin}/acesso-parceiro`)
   await page.getByPlaceholder('••••••••').fill('demo123')
   await page.getByRole('button', { name: 'Entrar', exact: true }).click()
+  await page.getByLabel('Código do estabelecimento').fill('RKMED00001')
   await page.getByPlaceholder('••••').fill('2468')
   await page.getByRole('button', { name: 'Iniciar atendimento' }).click()
   await page.getByPlaceholder('Ou cole o código do cartão').fill('RKMED-GOLD-ANA-8F4D7C2A')

@@ -1,5 +1,10 @@
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright-core'
+import { localClients, login as fixtureLogin, establishmentCode } from '../../scripts/dev/local.mjs'
+const local = localClients()
+const partnerFixture = await fixtureLogin(local, 'parceiro@rkmed.test')
+const entryCode = await establishmentCode(local, partnerFixture)
+await partnerFixture.auth.signOut({ scope: 'local' })
 const origin = process.env.RKMED_SANDBOX_URL || 'http://127.0.0.1:5174'
 const browser = await chromium.launch({ executablePath: '/usr/bin/brave-browser', headless: true, args: ['--no-sandbox', '--disable-gpu'] })
 try {
@@ -21,6 +26,8 @@ try {
     assert.ok(await page.getByText('Esse texto deve ser modificado por ter sido inteiramente gerado por IA e serve apenas para testes.', { exact: false }).count())
   }
   await login('parceiro@rkmed.test')
+  assert.equal(await page.locator('select').count(), 0)
+  await page.getByLabel('Código do estabelecimento').fill(entryCode)
   await page.getByLabel('Código do funcionário').fill('2468')
   await page.getByRole('button', { name: 'Iniciar atendimento' }).click()
   await page.getByRole('button', { name: 'Buscar por CPF' }).click()

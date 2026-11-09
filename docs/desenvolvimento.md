@@ -65,3 +65,19 @@ node tests/pwa-update.mjs
 ```
 
 `tests/hosted/smoke.mjs` exige `RKMED_HOSTED_KEY` publicável; consulta apenas homologação e não envia OTP nem cria pagamentos. Os testes conectados usam fixtures locais. Com provedores configurados, o teste de cadastro pode criar uma sessão Checkout de teste; não efetua pagamento. Não tratar transporte injetado, câmera emulada ou teste local como aceite em aparelho/provedor real.
+
+
+## Entrada de funcionário
+
+Depois do login da conta do parceiro, informar **Código do estabelecimento** e **Código do funcionário**. O servidor aceita somente o estabelecimento vinculado à conta autenticada e funcionário ativo desse parceiro; não existe seleção livre. Administração/suporte consulta o código gerado na aba Parceiros. O código de dez caracteres identifica a unidade e não substitui a senha. Trocar funcionário encerra o turno e solicita os dois códigos novamente.
+
+Na demonstração, a unidade inicial usa `RKMED00001` e a funcionária inicial usa `2468`. Esses valores são exclusivamente sintéticos. A demonstração mantém migração de dados locais antigos e gera código para novos parceiros. No banco real os códigos são gerados automaticamente, não recebem defaults de fixture.
+
+
+## Mapas dos parceiros
+
+Cartões e listas de parceiros oferecem **Ver no mapa** dentro da tela, inclusive gestão e área do próprio parceiro. O endereço cadastrado alimenta o mapa incorporado. `VITE_GOOGLE_MAPS_EMBED_KEY` continua opcional: com chave, usa Maps Embed API; sem chave, usa a incorporação pública por endereço. O link externo é uma opção adicional.
+
+Mapas individuais só carregam ao abrir e são removidos ao fechar. O mapa agregado permite selecionar um parceiro. Sem conexão, não há iframe: o endereço fica disponível com orientação para reconectar. Respostas do Google não são adicionadas ao cache da PWA. Código do estabelecimento, funcionário, contatos de associados e dados de sessão não compõem URLs de mapa.
+
+Verificar com `node tests/partner-maps.mjs` (dev:demo em 5173 e dev:sandbox em 5174). Esse teste isola o transporte Google e cobre telas, teclado, troca de parceiro, offline e largura 360px; o carregamento real do provedor foi conferido separadamente. A precisão depende do endereço cadastrado e da resolução do provedor.
