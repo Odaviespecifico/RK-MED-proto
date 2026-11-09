@@ -50,7 +50,7 @@ export default function SandboxApp({ config }: { config: PublicConfig }) {
     const fragment = new URLSearchParams(window.location.hash.replace(/^#/, ''))
     const url = new URL(window.location.href)
     const recoveryFragment = fragment.get('type') === 'recovery'
-    const recoveryCode = url.pathname === '/redefinir-senha' && url.searchParams.has('code')
+    const recoveryCode = url.searchParams.has('code')
     if (!recoveryFragment && !recoveryCode) return
     // Remove one-time credentials from the address bar before exchanging them.
     history.replaceState({}, '', `${url.pathname}${recoveryCode ? '' : url.search}`)

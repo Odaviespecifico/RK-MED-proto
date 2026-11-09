@@ -4,7 +4,7 @@
 
 Este é o documento principal para decidir e conduzir a liberação. Consulte também [ambientes](ambientes.md) para variáveis e [desenvolvimento](desenvolvimento.md) para comandos locais e publicação de homologação.
 
-Frontend de homologação: https://rk-med-proto.vercel.app — último deploy registrado `dpl_J2pbGLG1qTctsJ6Xhg1LHYhy8qa6`. Backend: projeto Supabase `chuyompxoctmpawhfmyb`, ambiente `sandbox`, 20 migrations aplicadas. O workspace contém uma migration adicional de recuperação de senha e alterações de frontend/Edge Function ainda não publicadas nem registradas como validadas. A homologação hospedada permanece na versão anterior até uma publicação explícita.
+Frontend de homologação: https://rk-med-proto.vercel.app — deploy atual registrado no Vercel. Backend: projeto Supabase `chuyompxoctmpawhfmyb`, ambiente `sandbox`, 21 migrations aplicadas. A migration `20261109203819_password_recovery_all_roles` e a Edge Function `phone-code` foram publicadas para reconhecer a solicitação e limitar tentativas por e-mail. O typecheck passou; o envio e o consumo de um link real ainda não foram confirmados nesta rodada.
 
 ## Entregue e verificado
 
@@ -23,6 +23,7 @@ O banco hospedado começou e terminou a verificação sem associados, parceiros 
 - Comprovar pagamento, renovação, falha, recuperação, cancelamento/reativação e ausência de duplicidade com eventos reais Stripe de teste. Webhook configurado não equivale a pagamento homologado.
 - Conferir portal Billing, recuperação D+0/D+1/D+3 e destinatário Connect Wedea. O identificador Wedea ainda não está configurado; não há teste de repasse real.
 - Revisar configurações Auth hospedadas e hooks legados para impedir caminhos alternativos de OTP. O motor novo já recusa uso dos hooks nativos RKMED.
+- Confirmar no Auth remoto o `Site URL` HTTPS da aplicação e a allowlist de redirects de recuperação. O `supabase/config.toml` local usa localhost para Docker e não altera automaticamente a configuração hospedada; links que não correspondem à allowlist podem cair no Site URL remoto.
 - Homologar permissões e operação com os responsáveis e aparelhos Android/iPhone físicos via HTTPS, incluindo câmera, instalação e atualização da PWA.
 
 ## Bloqueios para lançamento comercial
@@ -52,9 +53,9 @@ Quando os bloqueios acima forem encerrados, conduzir a liberação nesta ordem:
 
 Após cada etapa, registrar projeto/ambiente, versão do deploy, identificadores de migrations, verificações realizadas, resultado, operador e horário. Nunca registrar chaves, tokens, senhas, links de recuperação ou dados pessoais nos documentos.
 
-### Alterações locais ainda não publicadas
+### Aceite de recuperação de senha pendente
 
-O fluxo de recuperação de senha para associados, parceiros e equipe foi iniciado no workspace, com nova migration de limite de solicitações, envio por Resend e callback de Auth. Ainda não está aplicado ao Supabase hospedado nem publicado na Vercel, e não conta como aceite até completar validação e publicação em homologação. A migration remota atual continua em 20; a alteração nova deve ser aplicada como migration seguinte, sem resetar o banco.
+A função hospedada agora reconhece a ação `recover`, em vez de responder “Solicitação inválida”. O fluxo mantém resposta genérica para não revelar se a conta existe. Ainda falta confirmar o recebimento de um e-mail de recuperação e concluir a troca/login por perfil; até esse aceite, a funcionalidade não deve ser marcada como homologada.
 
 D33: início de turno exige código do estabelecimento e do funcionário, com validação contra o parceiro autenticado. Códigos visíveis somente na gestão autorizada de parceiros; seleção livre removida.
 

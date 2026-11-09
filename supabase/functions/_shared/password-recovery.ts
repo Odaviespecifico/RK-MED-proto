@@ -15,7 +15,9 @@ export async function requestPasswordRecovery(db: SupabaseClient, env: Environme
   const destinations = (env.RESEND_ALLOWED_TEST_EMAILS || '').split(',').map(value => value.trim().toLowerCase())
   if (!destinations.includes('*') && !destinations.includes(email)) return { accepted: true }
   try {
-    const generated = await db.auth.admin.generateLink({ type: 'recovery', email, options: { redirectTo: `${env.APP_ORIGIN}/redefinir-senha` } })
+    // The application root is the configured Auth site URL; the client moves a
+    // successful recovery callback to /redefinir-senha after consuming tokens.
+    const generated = await db.auth.admin.generateLink({ type: 'recovery', email, options: { redirectTo: env.APP_ORIGIN } })
     const link = generated.data.properties?.action_link
     const linkUrl = typeof link === 'string' ? new URL(link) : null
     const authOrigin = new URL(env.SUPABASE_URL!).origin

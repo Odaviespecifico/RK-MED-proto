@@ -1,6 +1,6 @@
 # Entrada em produção RKMED
 
-Estado em 09/11/2026: a homologação https://rk-med-proto.vercel.app já consulta Supabase hospedado real. Não é produção comercial. A lista de evidências e bloqueios atual fica em [prontidão](prontidao-producao.md).
+Este é o guia de execução para a entrada em produção. Estado em 09/11/2026: a homologação https://rk-med-proto.vercel.app já consulta Supabase hospedado real. Não é produção comercial. A lista de evidências e bloqueios atuais fica em [prontidão](prontidao-producao.md).
 
 ## Concluir homologação
 
@@ -11,6 +11,9 @@ Estado em 09/11/2026: a homologação https://rk-med-proto.vercel.app já consul
 5. Conferir portal Billing, recuperação D+0/D+1/D+3, destinatário Connect Wedea e alertas/outbox. Não confundir webhook configurado, e-mail aceito ou saldo Stripe com pagamento/repasse homologado.
 6. Revisar Auth hospedado/hooks antigos e os avisos legados de permissões/search_path. Testar recusa de acesso anônimo, cruzamento de associados/parceiros e alterações pela diretoria.
 7. Testar câmera, instalação, atualização, recarga offline e limpeza de sessão em Android/iPhone físicos via HTTPS.
+8. Exercitar recuperação de senha de associado, parceiro e equipe, incluindo expiração/uso único do link, retorno ao app e login com a nova senha. A função e a migration já estão publicadas em homologação; o envio de um e-mail real de recuperação ainda precisa ser confirmado.
+
+Na configuração **remota** do Supabase Auth, `Site URL` deve ser `https://rk-med-proto.vercel.app` para homologação e essa origem deve estar na lista de redirects permitidos. A migration local mantém `http://127.0.0.1:5173` para Docker; ela não configura o Auth hospedado. Se o redirect recebido não estiver permitido, Auth pode usar o `Site URL` como fallback. Não usar localhost no projeto hospedado.
 
 ## Preparar o lançamento comercial
 
@@ -25,6 +28,6 @@ Estado em 09/11/2026: a homologação https://rk-med-proto.vercel.app já consul
 
 A Vercel usa `npm ci`, `npm run build:hosted`, saída `dist` e raiz do repositório. O target estável chamado `production` pela Vercel continua executando o sandbox RKMED. `build:prod` segue reservado/bloqueado.
 
-O Supabase de homologação tem 17 migrations, seis funções atuais, bucket privado e worker agendado. O script [schedule-jobs.sql](../scripts/deploy/schedule-jobs.sql) depende de `rkmed_jobs_secret` no Vault e preserva o cron legado. Não gravar bearer no comando cron ou em arquivos versionados.
+O Supabase de homologação tem 21 migrations aplicadas, suite RKMED de Edge Functions, bucket privado e worker agendado. A recuperação de senha usa a função `phone-code` e a migration `20261109203819_password_recovery_all_roles`; ela é limitada por endereço, envia por Resend e mantém resposta pública genérica. O endpoint e o banco foram publicados; a jornada completa de e-mail ainda precisa de aceite registrado. O script [schedule-jobs.sql](../scripts/deploy/schedule-jobs.sql) depende de `rkmed_jobs_secret` no Vault e preserva o cron legado. Não gravar bearer no comando cron ou em arquivos versionados.
 
 Referências: [Supabase em produção](https://supabase.com/docs/guides/deployment/going-into-prod), [backups](https://supabase.com/docs/guides/platform/backups), [Stripe go-live](https://docs.stripe.com/get-started/checklist/go-live).

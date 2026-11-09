@@ -9,21 +9,29 @@ export function ForgotPassword({ client, online, go }: { client: SupabaseClient;
   const [email, setEmail] = useState('')
   const [busy, setBusy] = useState(false)
   const [sent, setSent] = useState(false)
+  const [resendIn, setResendIn] = useState(0)
   const [error, setError] = useState('')
-  async function submit(event: FormEvent) {
-    event.preventDefault()
+  async function send() {
     if (!online || busy) return
     setBusy(true); setError('')
     try {
       const { error } = await client.functions.invoke('phone-code', { body: { action: 'recover', email: email.trim() } })
       if (error) throw error
       setSent(true)
+      setResendIn(60)
     } catch { setError('Não foi possível enviar a solicitação agora. Verifique a conexão e tente novamente.') }
     finally { setBusy(false) }
   }
+  function submit(event: FormEvent) { event.preventDefault(); void send() }
+  useEffect(() => {
+    if (!resendIn) return
+    const timer = window.setTimeout(() => setResendIn(value => Math.max(0, value - 1)), 1000)
+    return () => window.clearTimeout(timer)
+  }, [resendIn])
   return <main className="partner-entry"><div className="partner-entry-card"><Brand /><button type="button" className="back-link" onClick={() => go('/')}><ArrowLeft size={15} /> Voltar</button>
     <h1>Esqueci minha senha</h1><p>Informe o e-mail da sua conta. Se houver um acesso associado a ele, enviaremos um link para criar outra senha.</p>
     {!sent ? <form onSubmit={submit}><label className="field-label">E-mail<input className="input" type="email" autoComplete="email" value={email} onChange={e => { setEmail(e.target.value); setError('') }} required maxLength={254} /></label><Button className="full" type="submit" disabled={!online || busy}>{busy ? 'Enviando…' : 'Enviar link de recuperação'}</Button>{error && <p role="alert" className="inline-error">{error}</p>}</form> : <p role="status" className="inline-success"><CheckCircle2 size={17} /> Se houver uma conta com esse e-mail, você receberá as instruções em breve. Confira também o spam.</p>}
+    {sent && <div className="counter-flow"><Button className="full" variant="outline" onClick={() => void send()} disabled={!online || busy || resendIn > 0}>{busy ? 'Enviando…' : resendIn > 0 ? `Reenviar link em ${resendIn}s` : 'Reenviar e-mail'}</Button>{!online && <p role="status" className="inline-error">Conecte-se à internet para solicitar um novo link.</p>}{error && <p role="alert" className="inline-error">{error}</p>}</div>}
     <p className="auth-foot"><button type="button" onClick={() => go('/acesso-admin')}>Entrar como equipe ou parceiro</button></p>
   </div></main>
 }
