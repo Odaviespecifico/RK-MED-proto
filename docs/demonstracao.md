@@ -22,7 +22,7 @@ Open <http://127.0.0.1:5173>. For a production-style PWA preview, run `npm run b
 | No-phone fallback | Search Ana's CPF `12345678909`, then confirm her photo. Carlos' CPF `98765432100` demonstrates blocked access. |
 | Admin login | `admin@rkmed.demo` / `demo123` |
 | Director viewer | `diretoria@rkmed.demo` / `demo123`; collections and reversal actions are hidden. |
-| New enrollment | Enter name, birth date and an unused valid CPF; then SMS, its demo code `123456`, e-mail and its demo code `123456`. The front camera opens automatically on the photo step and detects a face live. The photo is captured live only; choosing or uploading a file is not available. After the photo, the payment step opens with the R$ 69,60 monthly plan; confirming it in demo mode activates the member. In sandbox mode the same step redirects to Stripe Checkout. The portrait in `tests/fixtures/face-portrait.jpg` is fictional test data used by automated tests. |
+| New enrollment | Enter name, birth date and an unused valid CPF; then SMS, its demo code `123456`, e-mail and its demo code `123456`. The front camera opens automatically on the photo step and detects a face live. The photo is captured live only; choosing or uploading a file is not available. After the photo, the payment step opens with the R$ 69,90 monthly plan; confirming it in demo mode activates the member. In sandbox mode the same step redirects to Stripe Checkout. The portrait in `tests/fixtures/face-portrait.jpg` is fictional test data used by automated tests. |
 
 Member login has three screens: choose SMS or e-mail, enter that contact, and confirm its demo code. The chosen contact can be changed before confirmation. Resending keeps the selected SMS or email channel. WhatsApp is unavailable.
 

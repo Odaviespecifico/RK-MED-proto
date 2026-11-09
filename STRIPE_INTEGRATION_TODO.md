@@ -14,7 +14,7 @@ Não há parâmetros `sample_only` ausentes nem placeholders literais nas chamad
 
 | Campo preservado | Valor atual | Ação |
 | --- | --- | --- |
-| `mode` (ambas as chamadas) | `subscription` | Correto para a mensalidade recorrente de R$ 69,60. |
+| `mode` (ambas as chamadas) | `subscription` | Correto para a mensalidade recorrente de R$ 69,90. |
 | `line_items` (ambas as chamadas) | `[{ price: price.id, quantity: 1 }]` | ID obtido do catálogo validado; não substituir por `price_...`. |
 | `success_url` (adaptador) | `${origin.origin}/app/cobranca?checkout=processing` | URL existente da aplicação, preservada. |
 | `cancel_url` (adaptador) | `${origin.origin}/app/cobranca` | URL existente da aplicação, preservada. |
@@ -55,7 +55,7 @@ Foram removidos `metadata`, `subscription_data`, `locale` e `client_reference_id
 ### Ambiente, chaves e dependências
 
 - [ ] Executar `npm ci` se as dependências ainda não estiverem instaladas. Nenhuma dependência nova é necessária. Node e Edge usam Stripe 23.0.0; se houver downgrade para versão abaixo de 21.0.0, revisar `ui_mode` para `hosted`.
-- [ ] Executar `npm run env:init` e preencher o arquivo privado `.env.test`: `APP_ENV`, `APP_ORIGIN`, `STRIPE_SECRET_KEY`, `STRIPE_TEST_ACCOUNT_ID`, `STRIPE_PRICE_ID` e `STRIPE_WEBHOOK_SECRET`. Usar Price ativo de teste em BRL, 6960 centavos, recorrência mensal e quantidade 1. Configurar `STRIPE_PORTAL_CONFIGURATION_ID` para o portal já existente.
+- [ ] Executar `npm run env:init` e preencher o arquivo privado `.env.test`: `APP_ENV`, `APP_ORIGIN`, `STRIPE_SECRET_KEY`, `STRIPE_TEST_ACCOUNT_ID`, `STRIPE_PRICE_ID` e `STRIPE_WEBHOOK_SECRET`. Usar Price ativo de teste em BRL, 6990 centavos, recorrência mensal e quantidade 1. Configurar `STRIPE_PORTAL_CONFIGURATION_ID` para o portal já existente.
 - [ ] No mesmo `.env.test`, preencher `STRIPE_TEST_ENV` e `STRIPE_TEST_ORIGIN` para os utilitários independentes. Configurar `STRIPE_CLI_WEBHOOK_SECRET` se o listener da porta 4242 tiver segredo diferente do webhook das funções. Ver [ambientes](docs/ambientes.md).
 
 Diagnóstico local desta continuação: `npm run stripe:doctor` indicou `testKeyConfigured: false`, `expectedAccountConfigured: false`, `webhookSecretConfigured: false` e `remoteConnectionVerified: false` nos utilitários. A aceitação remota depende dessa configuração.

@@ -34,7 +34,7 @@ Credenciais de provedores foram adiadas pelo usuário: preparar estrutura local 
 - Abertura offline pela URL inicial `/` também recupera `/app` quando há snapshot válido. Sem operações enfileiradas.
 - Termos/privacidade públicos carregam documentos versionados de teste. Aviso de IA obrigatório permanece visível.
 
-Regras financeiras: R$69,60/mês; taxa explícita por parceiro, centavos inteiros e meio centavo para cima; bloqueio/falha de pagamento prevalecem; cancelamento no fim do período pago. Compras nos parceiros não são receita Stripe nem split.
+Regras financeiras: R$69,90/mês; taxa explícita por parceiro, centavos inteiros e meio centavo para cima; bloqueio/falha de pagamento prevalecem; cancelamento no fim do período pago. Compras nos parceiros não são receita Stripe nem split.
 
 ## Relatórios e exportação — implementação e validação local concluídas
 

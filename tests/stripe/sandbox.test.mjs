@@ -66,7 +66,7 @@ test('RF-PAG: reuses existing catalog without creating another product or price'
 });
 
 test('RF-PAG: rejects wrong amount, currency, period, inactive/live and unrelated products', async () => {
-  for (const change of [{ unit_amount: 6990 }, { currency: 'usd' }, { active: false }, { livemode: true },
+  for (const change of [{ unit_amount: 6980 }, { currency: 'usd' }, { active: false }, { livemode: true },
     { recurring: { interval: 'year', interval_count: 1 } }, { recurring: { interval: 'month', interval_count: 2 } },
     { product: 'prod_other' }]) {
     const client = catalogClient({ prices: { list: async () => ({ data: [{ ...price, ...change }] }) } });
@@ -86,7 +86,7 @@ test('RF-PAG: creates missing catalog with stable idempotency keys', async () =>
   await ensureCatalog(client, config);
   assert.equal(writes[0].options.idempotencyKey, writes[2].options.idempotencyKey);
   assert.equal(writes[1].options.idempotencyKey, writes[3].options.idempotencyKey);
-  assert.equal(writes[1].params.unit_amount, 6960);
+  assert.equal(writes[1].params.unit_amount, 6990);
 });
 
 test('RF-PAG: Checkout uses server-selected recurring price and Checkout Studio settings', async () => {
@@ -119,14 +119,14 @@ test('RF-PAG: Invoicing creates only a separate synthetic draft; no send, finali
     customers: { create: async (params) => { calls.push(['customer', params]); return object('cus_fixture'); } },
     invoices: {
       create: async (params) => { calls.push(['draft', params]); return { ...object('in_fixture'), status: 'draft' }; },
-      retrieve: async () => ({ ...object('in_fixture'), status: 'draft', total: 6960 }),
+      retrieve: async () => ({ ...object('in_fixture'), status: 'draft', total: 6990 }),
     },
     invoiceItems: { create: async (params) => { calls.push(['item', params]); return object('ii_fixture'); } },
   }, config);
   assert.equal(calls[1][1].auto_advance, false);
   assert.equal(calls[1][1].pending_invoice_items_behavior, 'exclude');
   assert.equal(calls[2][1].invoice, 'in_fixture');
-  assert.equal(calls[2][1].amount, 6960);
+  assert.equal(calls[2][1].amount, 6990);
   assert.equal('email' in calls[0][1], false);
 });
 

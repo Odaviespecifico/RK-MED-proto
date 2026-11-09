@@ -34,7 +34,13 @@ try {
   assert.equal(card.member.photoPath, `${context.userId}/photo.jpg`)
   assert.equal((await client.storage.from('member-photos').download(card.member.photoPath)).error, null)
   const checkout = await call({ action: 'checkout', operationId: crypto.randomUUID() })
-  assert.equal(checkout.status, 400, 'Sem chaves Stripe não pode abrir Checkout nem ativar cadastro')
+  if (checkout.status === 200) {
+    const body = await checkout.json()
+    assert.equal(body.livemode, false)
+    assert.match(body.url, /^https:\/\/checkout\.stripe\.com\//)
+  } else {
+    assert.equal(checkout.status, 400, 'Checkout sem provedor configurado deve ser recusado explicitamente')
+  }
   assert.equal((await rpc('rk_context')).member.eligible, false)
-  console.log('PASS: mesma identidade com e-mail+telefone, aceites versionados, CPF protegido, foto validada pela Edge real e cadastro inativo sem Stripe.')
+  console.log('PASS: mesma identidade com e-mail+telefone, aceites versionados, CPF protegido, foto validada pela Edge real e cadastro inativo sem confirmação de pagamento.')
 } finally { await client.auth.signOut() }

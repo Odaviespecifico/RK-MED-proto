@@ -2,7 +2,7 @@ import { readEnvironment } from '../env/files.mjs';
 import Stripe from 'stripe';
 
 export const API_VERSION = '2026-09-30.endive';
-export const AMOUNT = 6960;
+export const AMOUNT = 6990;
 export const EVENTS = [
   'checkout.session.completed', 'checkout.session.async_payment_succeeded',
   'invoice.paid', 'invoice.payment_failed',

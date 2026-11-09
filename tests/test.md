@@ -54,7 +54,7 @@ npm run functions:serve
 
 - [ ] **PRE-01 — Serviços:** abrir a aplicação em 5174, o Supabase Studio em `http://127.0.0.1:54323` e a caixa local de e-mail em `http://127.0.0.1:54324`. Esperado: serviços acessíveis e aplicação sem erro de configuração.
 - [ ] **PRE-02 — Dados:** confirmar com o técnico que migrations, fotos e contas sintéticas foram preparadas. Não reiniciar/apagar o banco durante uma rodada: isso invalida suas evidências.
-- [ ] **PRE-03 — Provedores:** antes dos testes PAG, confirmar Stripe de teste, preço mensal BRL de 6960 centavos, portal, webhook e funções configurados conforme [homologação](../docs/homologacao.md#cadastro-e-pagamento). As configurações dos utilitários Stripe não são carregadas automaticamente pelas Edge Functions.
+- [ ] **PRE-03 — Provedores:** antes dos testes PAG, confirmar Stripe de teste, preço mensal BRL de 6990 centavos, portal, webhook e funções configurados conforme [homologação](../docs/homologacao.md#cadastro-e-pagamento). As configurações dos utilitários Stripe não são carregadas automaticamente pelas Edge Functions.
 - [ ] **PRE-04 — Mensagens:** configurar o motor OTP RKMED (`OTP_HMAC_SECRET`), SMS Dev e Resend conforme [smsdev-otp.md](../docs/smsdev-otp.md). Confirmar recebimento em destinatários autorizados. Aceitação pela API não comprova entrega; não usar códigos fixos do Supabase para aprovar o novo fluxo.
 
 Não executar `db:reset` para apenas iniciar uma rodada. Caso o responsável precise recriar o banco **local descartável**, o procedimento está em [homologação](../docs/homologacao.md#iniciar-do-zero).
@@ -82,7 +82,7 @@ No Docker, telefones reservados no arquivo `supabase/config.toml` têm OTP `4829
 
 ## 3. Site público e navegação — RF-LP
 
-- [ ] **PUB-01 — Página inicial:** abrir `/`, percorrer todas as seções e usar os botões de entrar/cadastro. Esperado: navegação correta, mensalidade de **R$ 69,60**, textos legíveis e ausência de telas quebradas.
+- [ ] **PUB-01 — Página inicial:** abrir `/`, percorrer todas as seções e usar os botões de entrar/cadastro. Esperado: navegação correta, mensalidade de **R$ 69,90**, textos legíveis e ausência de telas quebradas.
 - [ ] **PUB-02 — Parceiros e mapa:** conferir categoria, endereço e desconto dos parceiros; selecionar endereços e abrir o Google Maps. Esperado: link correspondente ao parceiro selecionado; sem chave de mapa incorporado, endereço e link continuam disponíveis.
 - [ ] **PUB-03 — Documentos:** abrir Termos e Privacidade, além dos documentos apresentados no cadastro. Esperado: conteúdo carregado e versões identificáveis. Documentos de teste mantêm o aviso de texto gerado por IA; conteúdo indisponível não permite aceitar silenciosamente.
 - [ ] **PUB-04 — Menu móvel:** em tela de 360 px e em celular, abrir/fechar o menu e acessar links. Esperado: nenhum corte horizontal e controles alcançáveis.
@@ -96,7 +96,7 @@ No Docker, telefones reservados no arquivo `supabase/config.toml` têm OTP `4829
 - [ ] **CAD-03 — Dados e aceites:** informar nome, CPF sintético válido e não utilizado, nascimento de adulto; ler Termos, Privacidade e Uso da foto e aceitar. Esperado: avanço para foto, com versões e aceite registrados no servidor.
 - [ ] **CAD-04 — Somente câmera:** na etapa da foto, confirmar que não existe opção de escolher arquivo e que o aviso de nitidez é exibido. Esperado: a captura só é possível pela câmera ao vivo.
 - [ ] **CAD-05 — Foto pela câmera:** em nova conta, permitir o acesso quando a câmera abrir, enquadrar um rosto e capturar. Esperado: captura habilitada quando o enquadramento é aceito e foto salva. A mensagem não deve afirmar comprovação de identidade ou vivacidade.
-- [ ] **CAD-05A — Pagamento após o cadastro:** concluir a foto e confirmar que a etapa de pagamento aparece imediatamente, com a mensalidade de R$ 69,60. Esperado: o benefício continua indisponível até a confirmação do provedor; falha ao abrir o Checkout mostra erro e permite tentar novamente.
+- [ ] **CAD-05A — Pagamento após o cadastro:** concluir a foto e confirmar que a etapa de pagamento aparece imediatamente, com a mensalidade de R$ 69,90. Esperado: o benefício continua indisponível até a confirmação do provedor; falha ao abrir o Checkout mostra erro e permite tentar novamente.
 
 ### Rejeições e interrupções
 
@@ -135,14 +135,14 @@ Configurar o segredo correspondente no backend e reiniciar as funções conforme
 Pré-condição: associado novo, com ambos os contatos, aceites e foto, sem bloqueio; assinatura incompleta.
 
 1. Concluir a foto no cadastro e confirmar que a etapa de pagamento é aberta com **Pagamento pendente** / benefício indisponível.
-2. Clicar **Pagar R$ 69,60**.
-3. No Checkout Stripe, conferir cobrança **mensal**, em **BRL**, de **R$ 69,60**, e a identificação do cliente de teste.
+2. Clicar **Pagar R$ 69,90**.
+3. No Checkout Stripe, conferir cobrança **mensal**, em **BRL**, de **R$ 69,90**, e a identificação do cliente de teste.
 4. Preencher o cartão de aprovação e concluir o pagamento.
 5. Retornar à aplicação; aguardar o processamento do webhook e atualizar/reabrir a área do associado.
 6. No Dashboard Stripe, abrir a assinatura e a fatura correspondentes.
 7. No navegador do parceiro, consultar novamente o cartão e registrar uma compra conforme BAL-03.
 
-- [ ] **PAG-01A — Provedor:** fatura de R$ 69,60 paga, pagamento bem-sucedido e assinatura ativa, vinculados ao mesmo cliente.
+- [ ] **PAG-01A — Provedor:** fatura de R$ 69,90 paga, pagamento bem-sucedido e assinatura ativa, vinculados ao mesmo cliente.
 - [ ] **PAG-01B — Aplicação:** após conciliação verificada, benefício disponível, pagamento em dia e período pago coerente com a assinatura Stripe.
 - [ ] **PAG-01C — Uso efetivo:** o parceiro reconhece elegibilidade e consegue registrar a compra, que aparece no histórico/economia do associado.
 - [ ] **PAG-01D — Sem duplicidade:** atualizar a página ou voltar à área de pagamento não cria outra mensalidade/assinatura para a mesma obrigação.
@@ -155,11 +155,12 @@ Pré-condição: associado novo, com ambos os contatos, aceites e foto, sem bloq
 - [ ] **PAG-03 — Cartão recusado:** usar o cartão de recusa em um novo checkout. Esperado: erro de pagamento, sem liberação de benefício. Corrigir com cartão de aprovação e confirmar recuperação apenas após processamento do provedor.
 - [ ] **PAG-04 — 3DS:** usar o cenário oficial de autenticação exigida, primeiro cancelando/falhando o desafio e depois aprovando-o. Esperado: desafio pendente/falhado não libera benefício; conclusão bem-sucedida segue os mesmos critérios de PAG-01.
 - [ ] **PAG-05 — Retorno sem evento:** com apoio técnico, interromper temporariamente apenas o encaminhamento do webhook em ambiente isolado; pagar e retornar à aplicação antes de qualquer conciliação. Esperado: o retorno não ativa benefício. Retomar processamento/reenvio/conciliação e confirmar atualização. Outros reconciliadores também precisam estar controlados neste cenário.
-- [ ] **PAG-06 — Renovação aprovada:** com apoio técnico, avançar um ciclo de assinatura de teste usando recurso suportado pelo Stripe, como Test Clock quando aplicável. Esperado: nova fatura do ciclo, cobrança única de R$ 69,60, período pago atualizado e benefício disponível. Não simular renovação apenas alterando uma data no banco. Consulte [testes de Billing](https://docs.stripe.com/billing/testing).
+- [ ] **PAG-06 — Renovação aprovada:** com apoio técnico, avançar um ciclo de assinatura de teste usando recurso suportado pelo Stripe, como Test Clock quando aplicável. Esperado: nova fatura do ciclo, cobrança única de R$ 69,90, período pago atualizado e benefício disponível. Não simular renovação apenas alterando uma data no banco. Consulte [testes de Billing](https://docs.stripe.com/billing/testing).
 - [ ] **PAG-07 — Falha na renovação:** preparar método que falhe na cobrança recorrente conforme cenário oficial e gerar a próxima fatura da assinatura. Esperado: evento de falha processado, benefício removido imediatamente após essa confirmação, pendência visível para equipe e recusa no balcão. Usar associado sem bloqueio administrativo para isolar o motivo.
 - [ ] **PAG-08 — Recuperação D+0/1/3:** conferir com o técnico a política no Billing e executar a passagem dos prazos no ambiente de teste. Esperado: retentativas da mesma dívida em D+0, D+1 e D+3, sem outro agendador duplicando cobranças; registrar datas e resultados. Não marcar como aprovado somente por a configuração existir.
 - [ ] **PAG-09 — Atualização do cartão e quitação:** no associado inadimplente, usar **Gerenciar pagamento**, trocar para método válido e pagar/retentar a fatura existente. Esperado: a mesma dívida é quitada; benefício retorna após conciliação, se não houver bloqueio administrativo.
-- [ ] **PAG-10 — Cancelamento:** em assinatura paga, clicar **Cancelar ao fim do período**, voltar sem confirmar e conferir que nada mudou; repetir confirmando. Esperado: cancelamento agendado, sem nova cobrança após o encerramento; acesso permanece até o período pago acabar. Verificar antes/depois da data com apoio técnico.
+- [ ] **PAG-10 — Cancelamento e reativação:** em assinatura paga, clicar **Cancelar ao fim do período**, voltar sem confirmar e conferir que nada mudou; repetir confirmando. Esperado: cancelamento agendado, sem nova cobrança após o encerramento; acesso permanece até o período pago acabar. Em seguida, usar **Reativar assinatura** e confirmar que o cancelamento agendado é removido. Verificar antes/depois da data com apoio técnico.
+- [ ] **PAG-10A — Retorno do checkout:** concluir o pagamento e retornar em `/app/cobranca?checkout=processing`; antes da conciliação, conferir que nenhum benefício é ativado e que **Atualizar situação** apenas recarrega os dados. Repetir cancelando no Checkout e confirmar o aviso de pagamento não concluído com opção de tentar novamente.
 - [ ] **PAG-11 — Prioridade de bloqueios:** bloquear administrativamente uma conta paga; depois receber um evento de pagamento ou agendar cancelamento. Esperado: pagamento não remove o bloqueio. Desbloquear uma conta ainda inadimplente também não libera benefício.
 - [ ] **PAG-12 — Reembolso/disputa:** com apoio técnico, executar cenários de risco de teste no Stripe. Esperado: sinal correspondente na fila/alertas operacionais, sem reativação indevida por evento antigo. Registrar o estado observado e comparar com a política implementada; não presumir que todo sinal tem o mesmo efeito na elegibilidade.
 - [ ] **PAG-13 — Duplicação e ordem dos eventos:** pedir ao técnico para reenviar o mesmo evento e entregar evento pago antigo após falha mais recente. Esperado: nenhuma segunda cobrança/notificação/decisão financeira e nenhum benefício reativado a partir de estado desatualizado.
@@ -171,8 +172,8 @@ Pré-condição: associado novo, com ambos os contatos, aceites e foto, sem bloq
 - [ ] **MEM-02 — Economia:** anotar saldo inicial, registrar uma compra no parceiro e atualizar a área do associado. Esperado: acréscimo exatamente igual ao desconto; histórico mostra parceiro, data e valores correspondentes.
 - [ ] **MEM-03 — Paginação:** preparar mais de 25 compras com o técnico; navegar por páginas e voltar. Esperado: registros corretos, sem repetição/perda indevida; economia acumulada representa o total, não apenas a página aberta.
 - [ ] **MEM-04 — Parceiros:** abrir **Parceiros**, conferir rede, categorias, endereços, descontos e o mapa da rede contra o cadastro ativo da administração.
-- [ ] **MEM-05 — Cobrança e ajuda:** conferir mensalidade, período pago e bloqueios; testar os controles de pagamento disponíveis. Em **Conta**, enviar uma mensagem pelo formulário de ajuda e confirmar que ela aparece para admin/suporte; a resposta registrada pela equipe fica vinculada à solicitação. O envio exige conexão e não é enfileirado offline.
-- [ ] **MEM-06 — Seções do associado:** navegar por **Início**, **Parceiros**, **Economia** e **Conta** em celular. Esperado: cartão/QR na entrada, rede e mapa em Parceiros, totais e histórico em Economia, e e-mail/telefone verificados com CPF mascarado e assinatura em Conta. Nenhuma seção deve permitir alterar a assinatura sem passar pelo fluxo de pagamento.
+- [ ] **MEM-05 — Assinatura e ajuda:** abrir **Assinatura** e conferir situação, plano, valor, próximo vencimento, período pago, cartão (bandeira/últimos 4/validade) e últimas faturas com recibo. Testar os controles de pagamento disponíveis. Em **Conta**, enviar uma mensagem pelo formulário de ajuda e confirmar que ela aparece para admin/suporte; a resposta registrada pela equipe fica vinculada à solicitação. O envio exige conexão e não é enfileirado offline.
+- [ ] **MEM-06 — Seções do associado:** navegar por **Início**, **Parceiros**, **Economia**, **Assinatura** e **Conta** em celular. Esperado: cartão/QR na entrada, rede e mapa em Parceiros, totais e histórico em Economia, gestão completa da assinatura em Assinatura, e e-mail/telefone verificados com CPF mascarado e resumo da assinatura em Conta. Nenhuma seção deve ativar benefício sem confirmação do provedor.
 
 ## 7. Balcão e compra — RF-PP, RN-12–20, D10, D13, D18
 
@@ -255,7 +256,7 @@ Esta seção exige preparação técnica de contagem de associados, acesso autor
 
 O limite considera associados pagantes **com benefícios ativos após a conciliação**, incluindo quem acabou de pagar. O repasse é de **R$ 15,87 por fatura mensal paga de valor positivo** quando a contagem é de pelo menos 201. Compras no parceiro não entram nessa regra.
 
-- [ ] **WED-01 — Limite:** preparar cenário cuja contagem após o pagamento fique em 200, pagar uma mensalidade e verificar ausência de repasse. Em outro pagamento, atingir 201; esperado: um repasse de R$ 15,87 à Wedea, com decisão registrada por fatura. Em mensalidade integral, R$ 53,73 ficam com RKMED antes das tarifas.
+- [ ] **WED-01 — Limite:** preparar cenário cuja contagem após o pagamento fique em 200, pagar uma mensalidade e verificar ausência de repasse. Em outro pagamento, atingir 201; esperado: um repasse de R$ 15,87 à Wedea, com decisão registrada por fatura. Em mensalidade integral, R$ 54,03 ficam com RKMED antes das tarifas.
 - [ ] **WED-02 — Renovação/queda:** renovar com mais de 200 ativos; depois preparar cenário com total 200 e processar outro pagamento. Esperado: primeiro com repasse, segundo sem; não pagar retroativamente faturas decididas abaixo do limite.
 - [ ] **WED-03 — Contagem correta:** preparar bloqueado, inadimplente, período vencido e cancelamento agendado com período ainda pago. Esperado: os três primeiros não contam; cancelamento agendado conta enquanto pago e elegível.
 - [ ] **WED-04 — Eventos repetidos/concorrentes:** repetir o evento da mesma fatura e processar pagamentos simultâneos próximos do limite. Esperado: decisão preservada por fatura e no máximo uma transferência por obrigação; contagem serializada, sem duplicidade.

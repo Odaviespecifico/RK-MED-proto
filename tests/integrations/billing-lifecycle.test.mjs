@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { checkout, subscriptionSnapshot, processEvent } from '../../supabase/functions/_shared/billing.ts'
-const subscription = { id: 'sub_test', livemode: false, status: 'active', cancel_at_period_end: true, items: { data: [{ price: { id: 'price_test', currency: 'brl', unit_amount: 6960, recurring: { interval: 'month' } }, quantity: 1, current_period_end: 1900000000 }] } }
+const subscription = { id: 'sub_test', livemode: false, status: 'active', cancel_at_period_end: true, items: { data: [{ price: { id: 'price_test', currency: 'brl', unit_amount: 6990, recurring: { interval: 'month' } }, quantity: 1, current_period_end: 1900000000 }] } }
 const invoice = { id: 'in_test', livemode: false, status: 'paid', attempted: true, amount_remaining: 0 }
 test('RF-PAG: Checkout payment reconciles to the persisted member Customer only after a provider event', async () => {
   const memberId = '00000000-0000-4000-8000-000000000001'
@@ -52,7 +52,7 @@ test('RF-PAG: Checkout payment reconciles to the persisted member Customer only 
 })
 test('RF-PAG: only paid current invoice grants benefits; failure overrides active and scheduled cancellation', () => {
   assert.equal(subscriptionSnapshot(subscription, invoice, 'price_test').state, 'active')
-  const failed = subscriptionSnapshot(subscription, { ...invoice, status: 'open', amount_remaining: 6960 }, 'price_test')
+  const failed = subscriptionSnapshot(subscription, { ...invoice, status: 'open', amount_remaining: 6990 }, 'price_test')
   assert.equal(failed.state, 'past_due'); assert.equal(failed.paidThrough, null)
   assert.equal(subscriptionSnapshot({ ...subscription, status: 'incomplete' }, null, 'price_test').state, 'incomplete')
   assert.equal(subscriptionSnapshot(subscription, invoice, 'price_test').cancel, true)
@@ -80,7 +80,7 @@ test('RF-PAG: late invoice.paid cannot undo a newer unpaid invoice', async () =>
   const stripe = { invoices: { retrieve: async id => id === 'in_old' ? { ...invoice, id, customer: 'cus_test' } : { ...currentInvoice, customer: 'cus_test' } }, subscriptions: { list: async () => ({ has_more: false, data: [{ ...subscription, created: 1, latest_invoice: 'in_current' }] }) } }
   const event = (id, type) => ({ id, type, livemode: false, created: 1, data: { object: { id: 'in_old' } } })
   await processEvent(db, stripe, { STRIPE_PRICE_ID: 'price_test' }, event('evt_first', 'invoice.paid'))
-  currentInvoice = { ...invoice, status: 'open', amount_remaining: 6960 }
+  currentInvoice = { ...invoice, status: 'open', amount_remaining: 6990 }
   await processEvent(db, stripe, { STRIPE_PRICE_ID: 'price_test' }, event('evt_failure', 'invoice.payment_failed'))
   await processEvent(db, stripe, { STRIPE_PRICE_ID: 'price_test' }, event('evt_old_paid', 'invoice.paid'))
   assert.deepEqual(states, ['active', 'past_due', 'past_due'])

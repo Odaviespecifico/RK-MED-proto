@@ -19,7 +19,7 @@ try {
     await page.getByLabel('E-mail', { exact: true }).fill(role + '@rkmed.test')
     await page.getByLabel('Senha', { exact: true }).fill('RKMED-local-test-2026!')
     await page.getByRole('button', { name: 'Entrar', exact: true }).click()
-    await page.getByRole('heading', { name: 'Associados', exact: true }).waitFor()
+    await page.getByRole('heading', { name: 'Visão geral', exact: true }).waitFor()
     await page.getByRole('button', { name: 'Abrir navegação' }).click()
     await page.getByRole('button', { name: 'Relatórios', exact: true }).click()
     await page.getByRole('button', { name: 'Consultar relatório', exact: true }).click()

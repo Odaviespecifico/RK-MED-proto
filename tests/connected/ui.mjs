@@ -48,7 +48,7 @@ try {
   await signout()
   await login('ana@rkmed.test') // Synthetic fixture password through real local Auth; member product login remains OTP.
   await page.getByRole('img', { name: 'QR do cartão do associado' }).waitFor()
-  for (const [label, heading] of [['Parceiros', 'Parceiros'], ['Economia', 'Minha economia'], ['Conta', 'Minha conta']]) {
+  for (const [label, heading] of [['Parceiros', 'Parceiros'], ['Economia', 'Minha economia'], ['Assinatura', 'Minha assinatura'], ['Conta', 'Minha conta']]) {
     await page.getByRole('button', { name: 'Abrir navegação' }).click()
     await page.getByRole('dialog', { name: 'Navegação do painel' }).getByRole('button', { name: label, exact: true }).click()
     await page.getByRole('heading', { name: heading, exact: true }).waitFor()

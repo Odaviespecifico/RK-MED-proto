@@ -8,7 +8,7 @@ Answers recorded 2026-10-06. Answer by number; `recommend a default` is valid fo
 
 | # | Topic | Answer |
 | --- | --- | --- |
-| 1 | Monthly price | R$69.60. |
+| 1 | Monthly price | R$69.90. |
 | 2 | Pilot target/deadline | Does not matter for current planning. |
 | 3 | QR/offline | QR does not rotate; accept recommended static revocable reference and online partner validation. |
 | 4 | Payment failure | Immediate loss of access; show on seller screen. |

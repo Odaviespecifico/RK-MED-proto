@@ -18,6 +18,11 @@ export type AdminOverview = {
   attentionMembers: { id: string; name: string; billingState: string; paidThrough: string | null }[]
 }
 export type MemberEconomy = { savingsCents: string; purchases: number; partners: number }
+export type MemberSubscription = {
+  subscription: { status: string; currentPeriodEnd: number | null; cancelAtPeriodEnd: boolean; amount: number | null; currency: string | null; interval: string | null } | null
+  paymentMethod: { brand: string; last4: string; expMonth: number; expYear: number } | null
+  invoices: { id: string; number: string | null; status: string | null; amount: number; currency: string; created: number; hostedInvoiceUrl: string | null }[]
+}
 export type PortalPurchase = { id: string; memberId: string; memberName: string; partnerId: string; partnerName: string; employee: string; grossCents: number; discountCents: number; finalCents: number; createdAt: string; reversedAt: string | null }
 export type AdminMember = Pick<PortalMember, 'id' | 'name' | 'cpf' | 'eligible' | 'blocked' | 'billingState' | 'paidThrough' | 'joinedAt'> & { email: string | null; phone: string | null; invoiceId: string | null; amountDue: number | null; savingsCents: string }
 export type PortalEmployee = { id: string; name: string; partnerId: string; active: boolean }
@@ -42,6 +47,7 @@ export function portal(client: SupabaseClient) {
     answerSupport: (id: string, response: string) => rpc<void>('rk_answer_support_request', { p_id: id, p_response: response }),
     openSupport: (message: string) => rpc<string>('rk_open_support_request', { p_message: message }),
     memberEconomy: () => rpc<MemberEconomy>('rk_member_economy'),
+    async subscription() { return this.command<MemberSubscription>('subscription') },
     report: (filter: ReportFilter) => rpc<PurchaseReport>('rk_report', { p_from: filter.from, p_to: filter.to, p_partner: filter.partnerId }),
     exportPurchases: (filter: ReportFilter) => rpc<PurchaseExport>('rk_export_purchases', { p_from: filter.from, p_to: filter.to, p_partner: filter.partnerId }),
     partners: () => rpc<PublicPartner[]>('rk_partners'),

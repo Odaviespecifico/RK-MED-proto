@@ -17,7 +17,7 @@ export async function sandboxStripe(env: Environment) {
 export function subscriptionSnapshot(subscription: Stripe.Subscription, invoice: Stripe.Invoice | null, priceId: string) {
   const items = subscription.items.data
   if (subscription.livemode || items.length !== 1 || items[0].price.id !== priceId || items[0].quantity !== 1
-    || items[0].price.currency !== 'brl' || items[0].price.unit_amount !== 6960 || items[0].price.recurring?.interval !== 'month') throw new PublicError('Assinatura incompatível com o catálogo de testes.')
+    || items[0].price.currency !== 'brl' || items[0].price.unit_amount !== 6990 || items[0].price.recurring?.interval !== 'month') throw new PublicError('Assinatura incompatível com o catálogo de testes.')
   if (invoice?.livemode) throw new PublicError('Fatura incompatível com testes.')
   // An unpaid latest invoice overrides an otherwise active subscription immediately.
   const failed = invoice && invoice.status !== 'paid' && (invoice.attempted || subscription.status === 'past_due' || subscription.status === 'unpaid')
@@ -25,7 +25,7 @@ export function subscriptionSnapshot(subscription: Stripe.Subscription, invoice:
     : ['canceled', 'incomplete_expired'].includes(subscription.status) ? 'canceled'
     : ['past_due', 'unpaid', 'paused'].includes(subscription.status) ? 'past_due' : 'incomplete'
   return { state, paidThrough: invoice?.status === 'paid' ? new Date(items[0].current_period_end * 1000).toISOString() : null,
-    cancel: subscription.cancel_at_period_end, invoice: invoice?.id || null, amount: invoice?.amount_remaining ?? 6960 }
+    cancel: subscription.cancel_at_period_end, invoice: invoice?.id || null, amount: invoice?.amount_remaining ?? 6990 }
 }
 export async function reconcile(db: SupabaseClient, stripe: Stripe, customer: string, price: string, paidInvoice?: Stripe.Invoice) {
   const owner = crypto.randomUUID()

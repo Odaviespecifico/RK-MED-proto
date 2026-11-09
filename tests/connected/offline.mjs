@@ -32,7 +32,7 @@ try {
     throw error
   }
   await page.getByText('Você está offline.', { exact: false }).waitFor()
-  assert.equal(await page.getByRole('button', { name: 'Gerenciar pagamento' }).isDisabled(), true)
+  assert.equal(await page.getByRole('button', { name: 'Gerenciar assinatura' }).isDisabled(), true)
   await page.goto(origin + '/') // Installed manifest start_url must also recover the member card.
   await page.getByRole('img', { name: 'QR do cartão do associado' }).waitFor()
   await page.waitForURL(origin + '/app')

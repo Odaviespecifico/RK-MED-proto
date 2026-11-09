@@ -24,13 +24,13 @@ function fixture(overrides = {}) {
     } else assert.fail(name)
     return { data, error: null }
   } }
-  const charge = { id: 'ch_test', paid: true, status: 'succeeded', amount: 6960, currency: 'brl', customer: 'cus_test', livemode: false }
+  const charge = { id: 'ch_test', paid: true, status: 'succeeded', amount: 6990, currency: 'brl', customer: 'cus_test', livemode: false }
   const stripe = {
     v2: { core: { accounts: { retrieve: async () => ({ livemode: false,
       configuration: { recipient: { capabilities: { stripe_balance: { stripe_transfers: { status: 'active' } } } } },
       defaults: { responsibilities: { fees_collector: 'application', losses_collector: 'application' } },
     }) } } },
-    invoicePayments: { list: async () => ({ has_more: false, data: [{ invoice: 'in_test', amount_paid: 6960, currency: 'brl', livemode: false,
+    invoicePayments: { list: async () => ({ has_more: false, data: [{ invoice: 'in_test', amount_paid: 6990, currency: 'brl', livemode: false,
       payment: { type: 'payment_intent', payment_intent: 'pi_test' } }] }) },
     paymentIntents: { retrieve: async () => ({ livemode: false, status: 'succeeded', currency: 'brl', customer: 'cus_test', latest_charge: 'ch_test' }) },
     charges: { retrieve: async () => charge },
@@ -128,18 +128,18 @@ test('D27: paid renewal reconciles and reserves atomically before transfer; miss
     if (name === 'rk_event_finish') { statuses.set(args.p_id, args.p_error ? 'failed' : 'processed'); return { data: null, error: null } }
     return rpc(name, args)
   }
-  const invoice = { id: 'in_test', customer: 'cus_test', status: 'paid', livemode: false, currency: 'brl', amount_paid: 6960,
+  const invoice = { id: 'in_test', customer: 'cus_test', status: 'paid', livemode: false, currency: 'brl', amount_paid: 6990,
     amount_remaining: 0, parent: { subscription_details: { subscription: 'sub_test' } } }
   f.stripe.invoices = { retrieve: async () => invoice }
   f.stripe.subscriptions = { list: async () => ({ has_more: false, data: [{ id: 'sub_test', customer: 'cus_test', livemode: false,
     status: 'active', created: 1, cancel_at_period_end: false, latest_invoice: 'in_test', items: { data: [{ quantity: 1,
-      current_period_end: 1900000000, price: { id: 'price_test', currency: 'brl', unit_amount: 6960, recurring: { interval: 'month' } } }] } }] }) }
+      current_period_end: 1900000000, price: { id: 'price_test', currency: 'brl', unit_amount: 6990, recurring: { interval: 'month' } } }] } }] }) }
   const event = { id: 'evt_paid', type: 'invoice.paid', livemode: false, created: 1, data: { object: { id: 'in_test' } } }
   const env = { ...f.env, STRIPE_PRICE_ID: 'price_test', STRIPE_WEDEA_ACCOUNT_ID: '' }
   await assert.rejects(() => processEvent(f.db, f.stripe, env, event))
   assert.equal(syncs[0].p_sync.p_state, 'active')
   assert.equal(syncs[0].p_paid_invoice, 'in_test')
-  assert.equal(syncs[0].p_paid_amount, 6960)
+  assert.equal(syncs[0].p_paid_amount, 6990)
   assert.equal(statuses.get('evt_paid'), 'failed')
   await processEvent(f.db, f.stripe, { ...env, STRIPE_WEDEA_ACCOUNT_ID: 'acct_wedea' }, event)
   assert.equal(statuses.get('evt_paid'), 'processed')

@@ -8,11 +8,11 @@ export type PublicConfig = {
 
 export function readPublicConfig(env: Record<string, string | boolean | undefined>): PublicConfig {
   for (const [name, value] of Object.entries(env)) {
-    if (value && name.startsWith('VITE_') && (/SECRET|SERVICE_ROLE|PASSWORD|TOKEN|TWILIO|STRIPE|SMSDEV|OTP_HMAC/.test(name))) {
+    if (value && name.startsWith('VITE_') && (/SECRET|SERVICE_ROLE|PASSWORD|TOKEN|TWILIO|STRIPE|SMSDEV|CLICKSEND|OTP_HMAC/.test(name))) {
       throw new Error('Credencial de servidor encontrada na configuração pública. Remova-a antes de iniciar ou compilar.')
     }
   }
-  const mode = env.VITE_APP_MODE || 'demo'
+  const mode = env.VITE_APP_MODE || 'sandbox'
   const environment = env.VITE_APP_ENV || 'local'
   if (mode !== 'demo' && mode !== 'sandbox') throw new Error('VITE_APP_MODE deve ser demo ou sandbox.')
   if (environment !== 'local' && environment !== 'sandbox') throw new Error('Somente ambientes local e sandbox estão habilitados.')
@@ -42,4 +42,14 @@ export function readPublicConfig(env: Record<string, string | boolean | undefine
     throw new Error('Configure URL e chave publicável do Supabase para usar o modo sandbox.')
   }
   return { mode, environment, supabaseUrl, supabaseKey, projectRef }
+}
+
+// Hosting must never inherit a local/demo configuration from .env.test.
+export function publicBuildEnvironment(values: Record<string, string>, mode: string) {
+  const env = Object.fromEntries(Object.entries(values).filter(([key]) => key.startsWith('VITE_')))
+  if (mode === 'demo') env.VITE_APP_MODE = 'demo'
+  else if (mode === 'sandbox' || mode === 'hosted') env.VITE_APP_MODE = 'sandbox'
+  if (mode === 'hosted') env.VITE_APP_ENV = 'sandbox'
+  const config = readPublicConfig(env)
+  return { env, config }
 }

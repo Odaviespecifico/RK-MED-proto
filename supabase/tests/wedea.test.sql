@@ -23,7 +23,7 @@ insert into private.members(id,name,birth_date) select mid,'Wedea synthetic '||i
 insert into private.subscriptions(member_id,customer_id,subscription_id,state,paid_through)
  select mid,'cus_Wedea'||i,'sub_Wedea'||i,case when i<=199 then 'active' else 'incomplete' end,now()+interval '30 days' from cohort;
 
-create function pg_temp.pay(n integer,inv text,amount bigint default 6960) returns void language plpgsql as $$
+create function pg_temp.pay(n integer,inv text,amount bigint default 6990) returns void language plpgsql as $$
 declare mid uuid; owner uuid:=gen_random_uuid();
 begin
   select c.mid into mid from cohort c where i=n;

@@ -13,7 +13,7 @@ As ferramentas deste diretório são utilitários de desenvolvimento executados 
 ## Plano de integração e limites
 
 1. Separar ambientes/credenciais e provar assinatura, isolamento e dados de teste com esta estrutura.
-2. Criar o catálogo sintético: um Product Linha Gold e um Price recorrente mensal em BRL, de 6960 centavos.
+2. Criar o catálogo sintético: um Product Linha Gold e um Price recorrente mensal em BRL, de 6990 centavos.
 3. Exercitar Checkout em `mode=subscription`. A própria assinatura gera suas faturas de ciclo; não criar outra fatura para cobrar a mesma mensalidade.
 4. Exercitar Invoicing separadamente por um rascunho de teste com outro cliente sintético, sem envio nem cobrança automática.
 5. Antes de conectar associados reais ou de homologação ao pagamento, implementar Auth/permissões, cadastro com dois contatos verificados e as decisões pendentes em `plan.md`.
@@ -77,7 +77,7 @@ Esta etapa permanece pendente por escolha do operador.
 npm run stripe:bootstrap
 ```
 
-Cria ou reutiliza o produto sintético `rkmed_gold_test_local` e o preço de R$ 69,60/mês. O ambiente faz parte do identificador e do lookup key. Operações de criação usam chaves de idempotência. Se houver produto/preço incompatível, a ferramenta interrompe e pede revisão; não altera silenciosamente valores existentes.
+Cria ou reutiliza o produto sintético `rkmed_gold_test_local` e o preço de R$ 69,90/mês. O ambiente faz parte do identificador e do lookup key. Operações de criação usam chaves de idempotência. Se houver produto/preço incompatível, a ferramenta interrompe e pede revisão; não altera silenciosamente valores existentes.
 
 Preço e produto devem ter `livemode=false`. A saída contém apenas ambiente, IDs, moeda e valor. Repetir `bootstrap` reutiliza o catálogo; não recria um plano a cada execução.
 
@@ -117,7 +117,7 @@ npm run stripe:invoice
 
 - `stripe:checkout` reutiliza o catálogo e cria uma **nova sessão sintética a cada execução intencional**, com chave de idempotência por operação e referência sem CPF. A saída contém um link de Checkout de teste. Abrir localmente, usar somente dados sintéticos e cartões oficiais de teste, como `4242 4242 4242 4242`, validade futura e CVC de teste. Não inserir cartão real. Conferir se o sandbox habilita cartão e outros meios desejados no Dashboard; o código não fixa `payment_method_types`. [Cartões e cenários oficiais](https://docs.stripe.com/testing).
 - O retorno de sucesso aponta para o receptor local e diz que nenhum benefício foi ativado. Não altera o protótipo nem cria um associado pago.
-- `stripe:invoice` cria **outro cliente sintético e um novo rascunho independente por execução**. Define `auto_advance=false`, vincula explicitamente o item de 6960 centavos à fatura e não envia, finaliza nem paga a fatura. Conferir `status=draft` e `total=6960` no sandbox. Não usar esse comando para recuperar uma dívida de assinatura.
+- `stripe:invoice` cria **outro cliente sintético e um novo rascunho independente por execução**. Define `auto_advance=false`, vincula explicitamente o item de 6990 centavos à fatura e não envia, finaliza nem paga a fatura. Conferir `status=draft` e `total=6990` no sandbox. Não usar esse comando para recuperar uma dívida de assinatura.
 - A assinatura concluída pelo Checkout gera suas próprias faturas e eventos Billing. Usar esses objetos para testar renovação/recuperação na futura integração; não reaproveitar o rascunho independente como mensalidade pendente.
 
 Reenvio automático do SDK reutiliza a chave de idempotência da mesma chamada. Os comandos de cenários não implementam uma fila de recuperação após queda do processo: em caso de falha parcial, conferir os objetos sintéticos/metadata no sandbox antes de criar outro cenário. Isso não atende ainda à proteção durável exigida para cobrança de associados.

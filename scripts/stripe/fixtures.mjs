@@ -6,7 +6,7 @@ function assertPrice(price) {
   if (!price.active || price.currency !== 'brl' || price.unit_amount !== AMOUNT
     || price.type !== 'recurring' || price.recurring?.interval !== 'month'
     || price.recurring.interval_count !== 1) {
-    throw new SandboxError('O preço de teste existente diverge de R$ 69,60/BRL/mês. Revise o catálogo no sandbox.');
+    throw new SandboxError('O preço de teste existente diverge de R$ 69,90/BRL/mês. Revise o catálogo no sandbox.');
   }
   return price;
 }
@@ -27,7 +27,7 @@ export async function ensureCatalog(stripe, config) {
     || product.metadata?.rkmed_fixture !== 'catalog-v1') {
     throw new SandboxError('Produto de teste existente não pertence a este catálogo/ambiente.');
   }
-  const lookupKey = `${productId}_brl_6960_month_v1`;
+  const lookupKey = `${productId}_brl_6990_month_v1`;
   const found = await stripe.prices.list({ lookup_keys: [lookupKey], limit: 2 });
   if (found.data.length > 1) throw new SandboxError('Mais de um preço encontrado para o catálogo de testes.');
   const price = found.data[0] || await stripe.prices.create({
@@ -83,7 +83,7 @@ export async function createDraftInvoice(stripe, config) {
   }, request('draft')));
   assertTestObject(await stripe.invoiceItems.create({
     customer: customer.id, invoice: invoice.id, currency: 'brl', amount: AMOUNT,
-    description: 'Item de teste RKMED — R$ 69,60', metadata: data,
+    description: 'Item de teste RKMED — R$ 69,90', metadata: data,
   }, request('item')));
   return assertTestObject(await stripe.invoices.retrieve(invoice.id));
 }

@@ -400,3 +400,6 @@ button:active:not(:disabled), .button:active:not(:disabled) { transform: transla
   .staff-login-card h1 { color: var(--ink); }
   .partner-entry-card { padding: 28px 22px; }
 }
+
+.app-update { position: fixed; z-index: 1000; bottom: 16px; left: 16px; right: 16px; margin: auto; max-width: 640px; display: flex; align-items: center; gap: 16px; padding: 16px; background: #f7f6f2; color: #161d1b; border: 1px solid #c0a16d; border-radius: 12px; box-shadow: 0 8px 32px #0002; }
+@media (max-width: 480px) { .app-update { flex-direction: column; align-items: stretch; } }

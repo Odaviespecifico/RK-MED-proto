@@ -1,12 +1,6 @@
-> **OTP atual:** códigos de SMS/e-mail são gerados e validados pela RKMED. SMS Dev é somente transporte. Configuração e limites: [integração SMS Dev](docs/smsdev-otp.md). A configuração de SMS nativo mencionada abaixo foi substituída por D29.
-
-# Decisão vigente: OTP de telefone por SMS
-
-A decisão atual substitui WhatsApp por SMS. Login oferece SMS ou e-mail; primeiro cadastro verifica ambos. O envio usa o provedor nativo configurado no Supabase Auth, com `SMS_MODE=supabase-native` e `SMS_ALLOWED_TEST_NUMBERS` no gateway. Desativar o hook Send SMS legado antes de habilitar o provedor nativo. Credenciais e entrega externa ainda precisam de configuração/aceite; referências a WhatsApp abaixo são históricas.
-
 # RKMED Linha Gold
 
-**Decisão atual — 04/11/2026:** a API oficial do WhatsApp da Meta substitui o Twilio (D26 em [plan.md](plan.md)). A migração do código de entrega ainda está pendente; referências ao transporte Twilio abaixo descrevem o legado e não devem ser usadas para configurar novos envios. A alternativa por SMS foi removida por decisão do usuário em 04/11/2026; códigos de telefone serão entregues apenas pelo WhatsApp. Supabase Auth e Resend permanecem.
+Homologação conectada: https://rk-med-proto.vercel.app. Estado atual e bloqueios comerciais: [prontidão para produção](docs/prontidao-producao.md). OTP próprio com [ClickSend e Resend](docs/clicksend-otp.md).
 
 Aplicação React/Vite/TypeScript na raiz do repositório, com Supabase local e fluxos conectados ao Supabase local e integrações em sandbox. A interface original foi preservada. A demonstração usa dados fictícios isolados em `src/mocks/`; o modo sandbox usa módulos próprios, sem sucesso ou permissões simuladas.
 
@@ -19,7 +13,7 @@ npm ci
 npm run dev
 ```
 
-Demonstração: http://127.0.0.1:5173. [Credenciais e jornadas de demonstração](docs/demonstracao.md).
+Frontend conectado local: http://127.0.0.1:5173. Para demonstração isolada, executar `npm run dev:demo`. [Credenciais e jornadas de demonstração](docs/demonstracao.md).
 
 Execute `npm run env:init` para criar `.env.test` e `.env.prod` na raiz, sem sobrescrever valores existentes. Para desenvolvimento local, configure em `.env.test` a URL e a chave publicável/anon do Supabase e os campos de servidor necessários. Veja [configuração de ambientes](docs/ambientes.md) para comandos e separação entre valores públicos e segredos.
 
@@ -31,7 +25,7 @@ npm run dev:sandbox
 npm run functions:serve
 ```
 
-Sandbox: http://127.0.0.1:5174. `db:status` também imprime segredos locais; não compartilhar sua saída. Nenhuma conta de nuvem/login é necessária para a base local. O sandbox usa Auth, RLS/RPC e Storage privados reais locais para cadastro, cartão, balcão, compras e gestão. Os provedores externos continuam sem credenciais/envios. Consulte o [roteiro de homologação](docs/homologacao.md) para acessos sintéticos, comandos, testes e pendências.
+Sandbox: http://127.0.0.1:5174. `db:status` também imprime segredos locais; não compartilhar sua saída. Nenhuma conta de nuvem/login é necessária para a base local. O sandbox usa Auth, RLS/RPC e Storage privados reais locais para cadastro, cartão, balcão, compras e gestão. A homologação hospedada já possui provedores configurados; o aceite completo de SMS/pagamento continua pendente. Consulte o [roteiro de homologação](docs/homologacao.md) para acessos sintéticos, comandos, testes e pendências.
 
 ## Estrutura e documentação
 
@@ -59,11 +53,12 @@ npm run build
 npm run build:sandbox
 ```
 
-`npm run build` gera `dist/` para demonstração/PWA. `build:sandbox` gera `dist-sandbox/`, sem módulo de mocks nem registro da PWA demo. Não há deploy automático nestes comandos.
+`npm run build` gera o frontend conectado em `dist/`. `build:sandbox` gera `dist-sandbox/` para QA local; `build:hosted` gera `dist/` com Supabase remoto HTTPS obrigatório; `build:demo` gera a demonstração isolada em `dist-demo/`. Não há deploy automático nestes comandos.
 
 Com os servidores locais ativos e Brave instalado:
 
 ```bash
+# Estes dois testes usam o servidor dev:demo na porta 5173:
 npm run test:e2e
 npm run test:mobile
 node tests/sandbox-ui.mjs

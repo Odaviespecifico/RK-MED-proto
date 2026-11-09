@@ -4,7 +4,7 @@ import { trustedRpc } from '../_shared/backend-rpc.ts'
 import { boundedBody, PublicError, response } from '../_shared/http.ts'
 import { createOtpService } from '../_shared/otp-service.ts'
 import type { OtpIdentity, OtpPurpose, OtpChannel } from '../_shared/otp-service.ts'
-import { createSmsDev } from '../_shared/providers/smsdev.ts'
+import { createClickSend } from '../_shared/providers/clicksend.ts'
 import { createResendSandbox } from '../_shared/providers/resend.ts'
 const env = Deno.env.toObject()
 Deno.serve(async request => {
@@ -21,7 +21,7 @@ Deno.serve(async request => {
     const contact = typeof body.contact === 'string' ? (channel === 'email' ? body.contact.trim().toLowerCase() : body.contact) : ''
     // Check delivery configuration before allocating a challenge; never leak secrets/provider errors.
     const allowed = ((channel === 'sms' ? env.SMS_ALLOWED_TEST_NUMBERS : env.RESEND_ALLOWED_TEST_EMAILS) || '').split(',').map(v => v.trim().toLowerCase())
-    if (!allowed.includes(contact.toLowerCase())) throw new PublicError('Contato não autorizado no ambiente de testes.')
+    if (!allowed.includes('*') && !allowed.includes(contact.toLowerCase())) throw new PublicError('Contato não autorizado no ambiente de testes.')
     const db = createClient(env.SUPABASE_URL!, env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } })
     let actorId: string | null = null
     if (purpose === 'attach') {
@@ -39,8 +39,8 @@ Deno.serve(async request => {
       delivered: (id,provider,success) => trustedRpc(db,'rk_otp_sent',{p_id:id,p_provider:provider,p_success:success}),
       consume: args => trustedRpc(db,'rk_otp_consume',{p_id:args.id,p_contact_hash:args.contactHash,p_channel:args.channel,p_purpose:args.purpose,p_actor:args.actorId,p_code_hash:args.codeHash}),
       send: async (type,to,code,id) => {
-        if (type === 'sms') return (await createSmsDev(env).sendCode(to,code,id)).messageId
-        await createResendSandbox(env).send(to,'Seu código RKMED',`Seu código RKMED é ${code}. Válido por 5 minutos. Não compartilhe.`,id)
+        if (type === 'sms') return (await createClickSend(env).sendCode(to,code,id)).messageId
+        await createResendSandbox(env).send(to,'Seu código RKMED',`Seu código RKMED é ${code}. Válido por 5 minutos. Não compartilhe.`,id,code)
         return id
       },
       complete: async args => {

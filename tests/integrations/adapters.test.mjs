@@ -5,6 +5,7 @@ import { normalizeContact, createMemberAuth } from '../../src/integrations/auth.
 import { createSandboxBilling } from '../../src/integrations/billing.ts'
 import { createTwilioSandbox } from '../../supabase/functions/_shared/providers/twilio.ts'
 import { createStripeSandbox } from '../../supabase/functions/_shared/providers/stripe.ts'
+import { createResendSandbox } from '../../supabase/functions/_shared/providers/resend.ts'
 
 const publicEnv = { VITE_APP_MODE: 'sandbox', VITE_SUPABASE_URL: 'http://127.0.0.1:54321', VITE_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_synthetic' }
 const operation = '00000000-0000-4000-8000-000000000001'
@@ -61,6 +62,23 @@ test('provider failure never falls back to a demo OTP or optimistic verification
   await assert.rejects(() => auth.verifyCode({ channel: 'email', contact: 'a@example.invalid', token: '123456' }), /Solicite/)
 })
 
+test('Resend OTP email renders a branded HTML message without the test notice', async () => {
+  let captured
+  const env = { APP_ENV: 'local', RESEND_MODE: 'transactional-sandbox', RESEND_API_KEY: 're_synthetic', RESEND_FROM: 'no-reply@rkmed.example', RESEND_ALLOWED_TEST_EMAILS: 'member@example.invalid' }
+  const network = async (url, options) => { captured = { url, options }; return new Response('{"id":"mail"}', { status: 200 }) }
+  await assert.rejects(() => createResendSandbox(env, network).send('other@example.invalid', 'Seu código RKMED', 'código 123456', 'operation-denied', '123456'))
+  assert.equal(captured, undefined)
+  await createResendSandbox(env, network).send('member@example.invalid', 'Seu código RKMED', 'Seu código RKMED é 123456. Válido por 5 minutos. Não compartilhe.', 'operation-1', '123456')
+  const body = JSON.parse(captured.options.body)
+  assert.equal(body.from, 'RKMED <no-reply@rkmed.example>')
+  assert.equal(body.text, 'Seu código RKMED é 123456. Válido por 5 minutos. Não compartilhe.')
+  assert.match(body.html, /123456/)
+  assert.match(body.html, /RKMED/)
+  assert.match(body.html, /Código de verificação/)
+  assert.equal(`${body.text}${body.html}`.includes('gerado por IA'), false)
+  assert.equal(captured.options.headers['Idempotency-Key'], 'rkmed/operation-1')
+})
+
 test('Twilio is disabled by default and recipient allowlist is checked before network calls', async () => {
   let requests = 0
   const network = async () => { requests++; return new Response('{}', { status: 201 }) }
@@ -82,7 +100,7 @@ test('Stripe server transport rejects live keys and unexpected accounts/prices b
   const client = { accounts: { retrieve: async () => ({ id: 'acct_wrong' }) }, prices: { retrieve: async () => ({}) }, checkout: { sessions: { create: async () => { writes++ } } } }
   await assert.rejects(() => createStripeSandbox(stripeEnv, client).createCheckout('cus_fixture', operation))
   client.accounts.retrieve = async () => ({ id: 'acct_fixture' })
-  client.prices.retrieve = async () => ({ livemode: true, active: true, unit_amount: 6960, currency: 'brl', recurring: { interval: 'month', interval_count: 1 } })
+  client.prices.retrieve = async () => ({ livemode: true, active: true, unit_amount: 6990, currency: 'brl', recurring: { interval: 'month', interval_count: 1 } })
   await assert.rejects(() => createStripeSandbox(stripeEnv, client).createCheckout('cus_fixture', operation))
   assert.equal(writes, 0)
 })
@@ -90,7 +108,7 @@ test('Stripe server transport rejects live keys and unexpected accounts/prices b
 test('Stripe server retries preserve all idempotent request parameters and never grant eligibility', async () => {
   const calls = []
   const client = { accounts: { retrieve: async () => ({ id: 'acct_fixture' }) },
-    prices: { retrieve: async () => ({ id: 'price_fixture', livemode: false, active: true, unit_amount: 6960, currency: 'brl', recurring: { interval: 'month', interval_count: 1 } }) },
+    prices: { retrieve: async () => ({ id: 'price_fixture', livemode: false, active: true, unit_amount: 6990, currency: 'brl', recurring: { interval: 'month', interval_count: 1 } }) },
     checkout: { sessions: { create: async (params, options) => { calls.push({ params, options }); return { livemode: false, url: 'https://checkout.stripe.com/test' } } } } }
   const billing = createStripeSandbox(stripeEnv, client)
   await billing.createCheckout('cus_fixture', operation)

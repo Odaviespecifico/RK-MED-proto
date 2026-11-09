@@ -17,12 +17,15 @@ select ok(not exists(select 1 from pg_tables t join pg_class c on c.relname=t.ta
 select ok(not has_table_privilege('authenticated','private.support_requests','select'),'Support messages cannot be selected directly');
 -- Read fixtures as the owner before narrowing to the authenticated role.
 select set_config('rkmed.test.phone',(select '•••• '||right(phone,4) from auth.users where id='00000000-0000-4000-8000-000000000001'),true);
+select set_config('rkmed.test.purchases',(select count(*)::text from private.purchases p
+  where p.member_id='00000000-0000-4000-8000-000000000001'
+    and not exists(select 1 from private.reversals v where v.purchase_id=p.id)),true);
 
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000001","role":"authenticated","session_id":"81000000-0000-4000-8000-000000000001"}',true);
 set local role authenticated;
 select is(public.rk_context()->'member'->>'email','ana@rkmed.test','Member context exposes the own verified e-mail');
 select is(public.rk_context()->'member'->>'phone',current_setting('rkmed.test.phone'),'Member context masks the own phone');
-select is(public.rk_member_economy()->>'purchases','0','Member economy starts at zero in the fixture');
+select is(public.rk_member_economy()->>'purchases',current_setting('rkmed.test.purchases'),'Member economy counts persisted purchases excluding reversals');
 select throws_ok('select public.rk_support_requests()','42501','Acesso negado','Member cannot list support messages');
 select throws_ok('select public.rk_admin_overview()','42501','Acesso negado','Member cannot read the administration overview');
 select throws_ok('select * from private.support_requests','42501',null::text,'Direct support reads are denied');

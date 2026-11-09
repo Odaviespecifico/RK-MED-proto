@@ -2,15 +2,13 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
-import { readPublicConfig } from './src/lib/config.ts'
+import { publicBuildEnvironment } from './src/lib/config.ts'
 import { readEnvironment } from './scripts/env/files.mjs'
 
 export default defineConfig(({ mode }) => {
   // Read exactly one file; never merge .env.local or expose server variables.
   const values = readEnvironment(['prod', 'production'].includes(mode) ? 'prod' : 'test')
-  const publicEnv = Object.fromEntries(Object.entries(values).filter(([key]) => key.startsWith('VITE_')))
-  if (mode === 'sandbox') publicEnv.VITE_APP_MODE = 'sandbox'
-  const config = readPublicConfig(publicEnv)
+  const { env: publicEnv, config } = publicBuildEnvironment(values, mode)
   return {
   envDir: false,
   define: Object.fromEntries(Object.entries(publicEnv).map(([key, value]) => [`import.meta.env.${key}`, JSON.stringify(value)])),

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import QRCode from 'qrcode'
-import { ArrowRight, CreditCard, HelpCircle } from 'lucide-react'
+import { ArrowRight, HelpCircle } from 'lucide-react'
 import { readMemberSnapshot, saveMemberSnapshot, type MemberSnapshot } from '../../offline/member'
 import { Brand } from '../../components/identity'
 import { Button } from '../../components/ui/button'
@@ -15,8 +15,9 @@ import { useCursorPage } from '../../lib/useCursorPage'
 import { reportMoney } from '../../lib/reports'
 import { MemberInstallPrompt } from '../../components/MemberInstallPrompt'
 import { PartnerMap } from '../../PartnerMap'
+import { MemberSubscriptionPanel } from './MemberSubscription'
 
-export type MemberSection = 'inicio' | 'parceiros' | 'economia' | 'conta'
+export type MemberSection = 'inicio' | 'parceiros' | 'economia' | 'conta' | 'assinatura'
 
 export function ConnectedMember({ api, member, partners, online, refresh, snapshot, section = 'inicio', go }: { api: Portal; member: PortalMember; partners: PublicPartner[]; online: boolean; refresh: () => Promise<void>; snapshot?: MemberSnapshot; section?: MemberSection; go: (path: string) => void }) {
   const [qr, setQr] = useState('')
@@ -30,9 +31,7 @@ export function ConnectedMember({ api, member, partners, online, refresh, snapsh
   const [supportError, setSupportError] = useState('')
   const load = useCallback((cursor: PageCursor | null) => online ? api.purchasesPage(cursor, cursor === null) : Promise.resolve(savedHistoryPage(snapshot?.purchases || [], cursor)), [api, online, snapshot])
   const history = useCursorPage(load, online || !!snapshot)
-  const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [confirmCancel, setConfirmCancel] = useState(false)
   useEffect(() => { let current = true; QRCode.toDataURL(member.cardToken, { width: 240, margin: 2 }).then(value => { if (current) setQr(value) }); return () => { current = false } }, [member.cardToken])
   useEffect(() => {
     if (history.data?.savingsCents !== null && history.data?.savingsCents !== undefined) setSavings(history.data.savingsCents)
@@ -74,15 +73,6 @@ export function ConnectedMember({ api, member, partners, online, refresh, snapsh
     })().catch(() => { if (active) setError('Não foi possível salvar o histórico neste aparelho.') })
     return () => { active = false }
   }, [online, history.data, photo, savings, member, partners])
-  async function command(action: string) {
-    if (!online || busy) return
-    setBusy(true); setError('')
-    try {
-      const result = await api.command<{ url?: string }>(action, { operationId: crypto.randomUUID() })
-      if (result.url) { const url = new URL(result.url); if (url.protocol !== 'https:' || !['checkout.stripe.com', 'billing.stripe.com'].includes(url.hostname)) throw new Error('Destino de pagamento inválido.'); window.location.assign(url.href) }
-      else { setConfirmCancel(false); await refresh() }
-    } catch (e) { setError(e instanceof Error ? e.message : 'Não foi possível concluir.') } finally { setBusy(false) }
-  }
   async function sendSupport(e: FormEvent) {
     e.preventDefault()
     if (!online || supportBusy) return
@@ -100,15 +90,11 @@ export function ConnectedMember({ api, member, partners, online, refresh, snapsh
   const totalSavings = economy?.savingsCents ?? savings
   const subscription = <section className="surface-card account-plan">
     <div><h3>Minha assinatura</h3><span className={`status-badge ${member.eligible ? 'status-active' : 'status-blocked'}`}><span className="status-dot" />{member.eligible ? 'Benefício disponível' : 'Benefício indisponível'}</span></div>
-    <p>Linha Gold · {brl(6960)} / mês</p>
+    <p>Linha Gold · {brl(6990)} / mês</p>
     <p>{member.blocked ? 'Acesso bloqueado. Entre em contato com a equipe RKMED.' : member.billingState === 'active' ? 'Pagamento em dia' : member.billingState === 'past_due' ? 'Pagamento pendente' : member.billingState === 'canceled' ? 'Assinatura cancelada' : 'Assinatura incompleta'}</p>
     {member.paidThrough && <p>Período pago até {shortDate(member.paidThrough)}</p>}
     {member.cancelAtPeriodEnd && <p>Cancelamento agendado para o fim do período pago.</p>}
-    {member.billingState === 'incomplete' || member.billingState === 'canceled'
-      ? <Button disabled={!online || busy} onClick={() => void command('checkout')}>Concluir assinatura</Button>
-      : <Button disabled={!online || busy} onClick={() => void command('portal')}><CreditCard size={17} /> Gerenciar pagamento</Button>}
-    {member.billingState === 'active' && !member.cancelAtPeriodEnd && <Button variant="ghost" disabled={!online || busy} onClick={() => setConfirmCancel(true)}>Cancelar ao fim do período</Button>}
-    {confirmCancel && <div role="group" aria-label="Confirmar cancelamento"><p>Você manterá acesso até o fim do período pago, salvo bloqueio ou falha de pagamento.</p><Button disabled={!online || busy} onClick={() => void command('cancel')}>Confirmar cancelamento</Button><Button variant="ghost" onClick={() => setConfirmCancel(false)}>Voltar</Button></div>}
+    <Button disabled={!online} onClick={() => go('/app/assinatura')}>Gerenciar assinatura</Button>
   </section>
   const support = <section className="surface-card support-card">
     <HelpCircle size={25} />
@@ -142,6 +128,7 @@ export function ConnectedMember({ api, member, partners, online, refresh, snapsh
       <div className="stats-row"><div className="stat-large"><span>TOTAL ECONOMIZADO</span><strong>{totalSavings === null ? '—' : reportMoney(totalSavings)}</strong><small>Desde o início na Linha Gold</small></div><div className="stat-mini"><span>COMPRAS REGISTRADAS</span><strong>{recordedPurchases}</strong><small>Na sua jornada Gold</small></div><div className="stat-mini"><span>PARCEIROS VISITADOS</span><strong>{partnersVisited}</strong><small>Mais opções para você</small></div></div>
       <section className="surface-card counter-flow"><div className="small-section-head"><h2>Histórico de compras</h2><small>Valores das compras</small></div>{history.loading && <p role="status">Carregando histórico...</p>}{history.error && <p role="alert" className="inline-error">{history.error}</p>}{history.data && <PurchaseTable purchases={history.data.items} />}<PageControls label="Páginas do meu histórico" page={history} /></section>
     </>}
+    {section === 'assinatura' && <MemberSubscriptionPanel api={api} member={member} online={online} refresh={refresh} go={go} />}
     {section === 'conta' && <>
       <div className="welcome-row"><div><h1>Minha conta</h1><p>Seus dados e sua assinatura em um só lugar.</p></div></div>
       {error && <p role="alert" className="inline-error">{error}</p>}

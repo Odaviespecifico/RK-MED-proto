@@ -20,9 +20,9 @@ Deno.serve(async request => {
     const { data: context, error: denied } = await client.rpc('rk_context')
     if (denied || !context) return response({ error: 'Sessão expirada ou acesso negado.' }, 403, origin)
     const body = JSON.parse(await boundedBody(request, 7 * 1024 * 1024))
-    if (!['checkout', 'portal', 'cancel', 'collection', 'staff', 'photo'].includes(body.action)) return response({ error: 'Ação não disponível.' }, 400, origin)
+    if (!['checkout', 'portal', 'cancel', 'resume', 'subscription', 'collection', 'staff', 'photo'].includes(body.action)) return response({ error: 'Ação não disponível.' }, 400, origin)
     const staff = ['admin', 'support'].includes(context.role)
-    if ((['checkout', 'portal', 'cancel', 'photo'].includes(body.action) && context.role !== 'member') || (body.action === 'collection' && !staff) || (body.action === 'staff' && context.role !== 'admin')) return response({ error: 'Acesso negado.' }, 403, origin)
+    if ((['checkout', 'portal', 'cancel', 'resume', 'subscription', 'photo'].includes(body.action) && context.role !== 'member') || (body.action === 'collection' && !staff) || (body.action === 'staff' && context.role !== 'admin')) return response({ error: 'Acesso negado.' }, 403, origin)
     const db = createClient(env.SUPABASE_URL!, env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } })
     await trustedRpc(db, 'rk_backend_rate', { p_actor: data.user.id, p_action: body.action })
     if (body.action === 'photo') {
@@ -62,6 +62,44 @@ Deno.serve(async request => {
       await stripe.subscriptions.update(subscription.id, { cancel_at_period_end: true }, { idempotencyKey: `rkmed:cancel:${operation}` })
       await reconcile(db, stripe, info.customerId, env.STRIPE_PRICE_ID!)
       return response({ canceledAtPeriodEnd: true }, 200, origin)
+    }
+    if (body.action === 'resume') {
+      if (!info.subscriptionId) throw new PublicError('Assinatura não encontrada.')
+      const subscription = await stripe.subscriptions.retrieve(info.subscriptionId)
+      if (subscription.livemode || subscription.customer !== info.customerId) throw new PublicError('Assinatura inválida.')
+      if (!subscription.cancel_at_period_end) throw new PublicError('A assinatura não está agendada para cancelamento.')
+      await stripe.subscriptions.update(subscription.id, { cancel_at_period_end: false }, { idempotencyKey: `rkmed:resume:${operation}` })
+      await reconcile(db, stripe, info.customerId, env.STRIPE_PRICE_ID!)
+      return response({ resumed: true }, 200, origin)
+    }
+    if (body.action === 'subscription') {
+      const subscription = info.subscriptionId ? await stripe.subscriptions.retrieve(info.subscriptionId) : null
+      if (subscription && (subscription.livemode || subscription.customer !== info.customerId)) throw new PublicError('Assinatura inválida.')
+      const item = subscription?.items.data[0]
+      const methods = await stripe.paymentMethods.list({ customer: info.customerId, type: 'card', limit: 1 })
+      const card = methods.data[0]?.card
+      const invoices = await stripe.invoices.list({ customer: info.customerId, limit: 6 })
+      return response({
+        livemode: false,
+        subscription: subscription && item ? {
+          status: subscription.status,
+          currentPeriodEnd: item.current_period_end,
+          cancelAtPeriodEnd: subscription.cancel_at_period_end,
+          amount: item.price.unit_amount,
+          currency: item.price.currency,
+          interval: item.price.recurring?.interval ?? null,
+        } : null,
+        paymentMethod: card ? { brand: card.brand, last4: card.last4, expMonth: card.exp_month, expYear: card.exp_year } : null,
+        invoices: invoices.data.map(invoice => ({
+          id: invoice.id,
+          number: invoice.number,
+          status: invoice.status,
+          amount: invoice.amount_paid || invoice.amount_due,
+          currency: invoice.currency,
+          created: invoice.created,
+          hostedInvoiceUrl: invoice.hosted_invoice_url ?? null,
+        })),
+      }, 200, origin)
     }
     if (!['link', 'retry'].includes(body.collectionAction) || body.invoiceId !== info.invoiceId) throw new PublicError('Fatura não disponível. Atualize a lista.')
     const invoice = await stripe.invoices.retrieve(body.invoiceId)

@@ -1,6 +1,6 @@
 # Wedea — repasse das mensalidades (D27)
 
-RKMed continua sendo responsável pelas assinaturas e cobranças de R$69,60/mês. Wedea recebe R$15,87 por fatura de mensalidade paga com valor positivo quando há pelo menos 201 associados pagantes com benefícios ativos. Em uma mensalidade integral, RKMed retém R$53,73 antes das tarifas Stripe/Billing/Connect. Compras nos estabelecimentos parceiros continuam fora desse fluxo.
+RKMed continua sendo responsável pelas assinaturas e cobranças de R$69,90/mês. Wedea recebe R$15,87 por fatura de mensalidade paga com valor positivo quando há pelo menos 201 associados pagantes com benefícios ativos. Em uma mensalidade integral, RKMed retém R$54,03 antes das tarifas Stripe/Billing/Connect. Compras nos estabelecimentos parceiros continuam fora desse fluxo.
 
 ## Regra e processamento
 

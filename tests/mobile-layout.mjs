@@ -4,7 +4,7 @@ import { chromium } from 'playwright-core'
 const browser = await chromium.launch({ executablePath: '/usr/bin/brave-browser', headless: true, args: ['--no-sandbox', '--disable-gpu'] })
 const routes = {
   public: ['/', '/entrar', '/cadastro'],
-  member: ['/app', '/app/parceiros', '/app/economia', '/app/conta'],
+  member: ['/app', '/app/parceiros', '/app/economia', '/app/assinatura', '/app/conta'],
   partner: ['/parceiro', '/parceiro/historico'],
   admin: ['/admin', '/admin/parceiros', '/admin/equipe', '/admin/compras', '/admin/cobrancas'],
 }

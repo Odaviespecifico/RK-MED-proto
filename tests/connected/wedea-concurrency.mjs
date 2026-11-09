@@ -19,7 +19,7 @@ const invoice = `in_Concurrency${randomUUID().replaceAll('-', '')}`
 const claims = [randomUUID(), randomUUID()]
 try {
   await sql(`insert into private.wedea_shares(invoice_id,member_id,customer_id,subscription_id,active_members,paid_amount,amount_cents,status)
-    values('${invoice}','00000000-0000-4000-8000-000000000001','cus_Concurrency','sub_Concurrency',201,6960,1587,'pending');`)
+    values('${invoice}','00000000-0000-4000-8000-000000000001','cus_Concurrency','sub_Concurrency',201,6990,1587,'pending');`)
   const results = await Promise.all(claims.map(owner => sql(`begin;
     set local request.jwt.claims='{"role":"service_role"}';
     select public.rk_wedea_claim('${invoice}','${owner}','acct_Wedea','ch_Concurrency',true) is not null;

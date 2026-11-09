@@ -1,115 +1,67 @@
-> **OTP atual:** códigos de SMS/e-mail são gerados e validados pela RKMED. SMS Dev é somente transporte. Configuração e limites: [integração SMS Dev](smsdev-otp.md). A configuração de SMS nativo mencionada abaixo foi substituída por D29.
+# Desenvolvimento RKMED
 
-# Decisão vigente: OTP de telefone por SMS
+React/Vite/TypeScript, Supabase PostgreSQL/Auth/Storage e Edge Functions. O site https://rk-med-proto.vercel.app usa o Supabase hospedado de homologação. [Prontidão e pendências](prontidao-producao.md).
 
-A decisão atual substitui WhatsApp por SMS. Login oferece SMS ou e-mail; primeiro cadastro verifica ambos. O envio usa o provedor nativo configurado no Supabase Auth, com `SMS_MODE=supabase-native` e `SMS_ALLOWED_TEST_NUMBERS` no gateway. Desativar o hook Send SMS legado antes de habilitar o provedor nativo. Credenciais e entrega externa ainda precisam de configuração/aceite; referências a WhatsApp abaixo são históricas.
+## Rodar com banco real local
 
-# Desenvolvimento da aplicação RKMED
-
-**Decisão atual — 04/11/2026:** a API oficial do WhatsApp da Meta substitui o Twilio (D26 em [plan.md](../plan.md)). A migração do código de entrega ainda está pendente; referências ao transporte Twilio abaixo descrevem o legado e não devem ser usadas para configurar novos envios. A alternativa por SMS foi removida por decisão do usuário em 04/11/2026; códigos de telefone serão entregues apenas pelo WhatsApp. Supabase Auth e Resend permanecem.
-
-O frontend foi promovido de `prototype/` para a raiz, preservando estilos, assets e fluxos da demonstração. A raiz agora tem um único `package.json`, lockfile, `index.html`, configuração Vite e configuração de hospedagem. `prototype/README.md` permanece como referência histórica; arquivos locais antigos dessa pasta não são usados.
-
-> Atualização de implementação: o [roteiro de homologação](homologacao.md) reúne os comandos e acessos atuais. O sandbox agora possui domínio/RLS, cadastro, foto no backend, cartão, balcão, gestão e endpoints de integração; provedores externos aguardam credenciais e aceitação.
-
-## Iniciar
+Requer Node 22+, npm e Docker. Na raiz:
 
 ```bash
 npm ci
-npm run dev
-```
-
-Abre a demonstração em `http://127.0.0.1:5173`, sem chamadas a provedores. Os [acessos de demonstração](demonstracao.md) e dados existentes do navegador foram preservados. Usar apenas dados fictícios nesse modo: seu armazenamento e regras locais não são autorização ou proteção de dados reais.
-
-Para preparar Supabase local:
-
-```bash
 npm run db:start
 npm run local:prepare
-```
-
-Em uma máquina nova, executar `npm run env:init` para criar `.env.test` e `.env.prod` na **raiz**, preservando arquivos existentes. Preencher os dados locais e provedores de teste em `.env.test`; somente `VITE_*` é público. Veja [ambientes](ambientes.md). Não compartilhar a saída completa de `db:status`, pois também contém segredos administrativos.
-
-```bash
 npm run dev:sandbox
+# Outro terminal:
+npm run functions:serve
 ```
 
-Abre o modo sandbox em `http://127.0.0.1:5174`. A porta separada isola sessões, dados locais e a PWA da demonstração. Para alternar portas, manter origens distintas. O build sandbox agora registra seu próprio service worker estático e mantém snapshot explícito do associado em IndexedDB; veja os testes e limites no roteiro de homologação. Não usar o mesmo domínio instalado para alternar builds demo/sandbox: um worker antigo pode servir a versão já salva antes da troca de ambiente.
+A aplicação conectada abre em http://127.0.0.1:5174. `npm run dev` também usa o modo conectado, normalmente em 5173; ajustar `APP_ORIGIN` local se usar OTP ou comandos Edge nessa origem. Studio: 54323; Mailpit: 54324. Consultar as contas sintéticas no registro de [homologação](homologacao.md). Nunca copiar seeds/senhas/OTP fixos para o projeto hospedado.
 
-## Configuração pública
+`db:reset` apaga exclusivamente o banco Docker local. Não usar reset contra homologação/produção. Os testes `connected` verificam a origem local antes de acessar credenciais privilegiadas.
 
-| Variável | Uso |
+## Build e demonstração
+
+| Comando | Resultado |
 | --- | --- |
-| `VITE_APP_MODE` | `demo` (padrão) ou `sandbox`; `npm run dev:sandbox` seleciona sandbox |
-| `VITE_APP_ENV` | `local` para localhost; `sandbox` para um projeto remoto dedicado a testes |
-| `VITE_SUPABASE_URL` | `http://127.0.0.1:54321` no ambiente local |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | Chave publicável ou JWT de papel `anon`; chave privilegiada é rejeitada |
-| `VITE_SUPABASE_PROJECT_REF` | Obrigatória para conferir a URL de um projeto remoto de testes |
-| `VITE_FACE_DETECTION_MIN_CONFIDENCE` | Limiar da detecção local de rosto; padrão 0,8 |
-| `VITE_GOOGLE_MAPS_EMBED_KEY` | Opcional; chave pública restrita à API e aos domínios autorizados |
+| `dev` / `build` | Frontend conectado, Supabase de `.env.test`; build em `dist` |
+| `dev:sandbox` / `build:sandbox` | Conectado em 5174 / artefato em `dist-sandbox` |
+| `build:hosted` | Conectado a Supabase remoto HTTPS; saída `dist`; comando da Vercel |
+| `dev:demo` / `build:demo` | Demonstração isolada; build em `dist-demo` |
+| `build:prod` | Reservado; produção comercial ainda recusada pelo runtime |
 
-Configuração incorreta interrompe a inicialização/build; não muda silenciosamente para uma demonstração. `VITE_*` com nomes de segredos/Twilio/Stripe é rejeitado antes de compilar. O frontend não precisa de chave Stripe para redirecionar ao Checkout criado pelo servidor.
+A demonstração usa `src/mocks`. O build conectado elimina seu módulo e não consulta suas sessões, não retorna fixtures e não simula pagamento ou envio bem-sucedido. Testes `flows.mjs`/`mobile-layout.mjs` antigos usam `dev:demo` em 5173. Testes `connected/ui.mjs` e `sandbox-ui.mjs` usam 5174. Offline conectado usa preview em 4174.
 
-Para usar um Supabase remoto, criar/selecionar um projeto **dedicado a testes** e definir `VITE_APP_ENV=sandbox`, URL, referência e chave públicas correspondentes em `.env.test`, ignorado pelo Git. A referência confere o destino; ela não comprova sozinha que a conta/projeto foi administrativamente separado da produção. Nenhum projeto remoto foi criado ou vinculado nesta entrega.
+## Ambientes e publicação
 
-## Organização e comportamento
+Somente `.env.test` e `.env.prod`, privados/ignorados. `env:init` cria templates sem sobrescrever arquivos existentes. Vite lê um arquivo explícito e expõe somente `VITE_*`; variáveis do processo prevalecem. Ver [ambientes](ambientes.md).
 
-| Local | Responsabilidade |
-| --- | --- |
-| `src/app/` | Seleção explícita de modo, inicialização e rotas do ambiente sandbox |
-| `src/features/public/` e `src/features/auth/` | Landing e formulário de login compartilhados, com a interface preservada |
-| `src/components/` | Primitivos e identidade visual |
-| `src/lib/` | Configuração pública, formatos e detecção de rosto |
-| `src/mocks/` | Fixtures, OTP/senha fake, sessões locais e fluxos da demonstração; importação lazy somente no modo demo |
-| `src/integrations/` | Cliente Supabase, contrato de autenticação e contrato de Checkout via backend |
-| `supabase/functions/_shared/providers/` | Transportes de servidor Stripe sandbox e Twilio WhatsApp Sandbox, ainda sem endpoints publicados |
-| `scripts/stripe/` | Ferramentas de catálogo, Checkout, fatura sintética e receptor local de eventos |
-| `tests/` | Testes da aplicação, integrações, Stripe e jornadas de navegador |
+Na Vercel, configurar `VITE_APP_MODE=sandbox`, `VITE_APP_ENV=sandbox`, URL/chave publicável/referência do projeto de testes. O build hospedado força sandbox e recusa URL local/projeto divergente. A referência confere o destino; não comprova isolamento administrativo da conta. Segredos ficam exclusivamente nas Edge Functions. Não há dependência de `.env.test` versionado para compilar na nuvem.
 
-O build sandbox elimina a importação de `src/mocks/DemoApp.tsx`; não consulta suas fixtures nem seus dados/sessões no navegador. As chaves antigas `rkmed-prototype-*` são mantidas apenas na demonstração para preservar o comportamento existente. O cliente real usa uma chave de sessão própria por ambiente/projeto, com refresh rotativo.
+As funções são empacotadas com `scripts/dev/package-functions.mjs`, preservando o nome `rkmed-stripe-webhook` para não substituir o webhook legado. Sem origem explícita, o pacote lê as variáveis de servidor normalmente; com origem HTTPS, fixa apenas o roteamento público da homologação. Não usar esse pacote de sandbox em produção.
 
-No sandbox, a landing lê parceiros ativos do banco. Cadastro, carteirinha, histórico, identificação do funcionário, validação, compra, estorno e painéis usam permissões do servidor. As funções de provedores exigem credenciais sandbox e não simulam sucesso na ausência delas. Nem login nem retorno do Checkout liberam benefícios.
+## Cadastro e provedores
 
-## Supabase Auth e OTP
+[ClickSend e OTP](clicksend-otp.md) descreve o contrato atual. A RKMED emite/verifica os dois códigos. Supabase só mantém identidade/sessão; não há OTP nativo, WhatsApp ou PIN no fluxo atual. Cadastro exige e-mail e celular na mesma identidade, dados/aceites, foto privada validada e Checkout. O retorno do Checkout nunca ativa benefício.
 
-`src/integrations/auth.ts` normaliza contatos e chama `signInWithOtp`/`verifyOtp`. Login usa `shouldCreateUser=false`: esse formulário autentica contas já existentes, sem cadastrar uma identidade diferente ao alternar canais. Supabase continua responsável pelo desafio, expiração, tentativas e sessão. Não existe PIN.
+Por solicitação do usuário em 09/11, homologação aceita qualquer e-mail e celular brasileiro: as duas listas usam `*` explícito. Defaults vazios continuam bloqueando envio. Limites, consumo único e validação dos contatos continuam ativos. Usar e-mail distinto de contas internas para cadastrar associado; perfis não são convertidos automaticamente.
 
-- O template OTP local está em `supabase/templates/otp.html`; mensagens aparecem no Mailpit em `http://127.0.0.1:54324`.
-- Telefones sintéticos reservados usam OTP fixo somente no Docker. Isso não comprova entrega externa.
-- O cadastro verifica e-mail e telefone na mesma identidade, oferece reenvio com espera pelo mesmo canal, sem alternativa por SMS. Login continua com duas opções: WhatsApp e e-mail.
-- `phone-code` e os hooks assinados controlam o canal de entrega no servidor. As funções Twilio/Resend ficam desabilitadas até configuração explícita do sandbox.
+Stripe continua somente em teste. Worker concilia e processa a outbox a cada cinco minutos no hospedado, com bearer no Vault. Não criar outro agendador para repetir cobranças: recuperação D+0/D+1/D+3 pertence ao Stripe Billing. Stripe Tax permanece desabilitado.
 
-## Provedores no servidor
-
-O [roteiro de homologação](homologacao.md#twilio-resend-e-jobs) é a referência de configuração de transportes, hooks e filas. `.env.test` é ignorado pelo Git; nenhuma chave secreta deve entrar no frontend.
-
-`rkmed-api` valida sessão/perfil e executa foto, Checkout, portal, cancelamento e cobranças. Stripe exige conta/Price de teste, contatos, consentimentos e foto; eventos assinados, recibos duráveis e conciliação verificam a elegibilidade. Não existe ativação pelo redirecionamento do Checkout. Os [utilitários Stripe](stripe-testes.md) são independentes desses endpoints.
-
-Stripe Tax permanece desabilitado. Configuração de recuperação D+0/1/3, entrega externa e jornadas reais de sandbox ainda aguardam aceitação. Nenhum deploy ou envio externo foi feito.
-
-## Verificação e próximos passos
+## Verificações
 
 ```bash
 npm run typecheck
 npm test
-npm run build
+npm run db:lint
+npm run db:test
+npm run test:connected:api
+npm run test:connected:enrollment
+npm run test:connected:ui
 npm run build:sandbox
-npm run test:e2e
-npm run test:mobile
-node tests/sandbox-ui.mjs
+npm run preview -- --port 4174 --outDir dist-sandbox
+# Outro terminal:
+npm run test:connected:offline
+node tests/pwa-update.mjs
 ```
 
-Os testes HTTP/navegador precisam de permissão para loopback e Brave. `test:e2e` e `test:mobile` usam o servidor demo (5173; pode ser substituído por `RKMED_TEST_URL`). `sandbox-ui.mjs` usa 5174 (ou `RKMED_SANDBOX_URL`) e intercepta os endpoints Auth, sem enviar códigos reais. `tests/offline.mjs` usa o preview do build demo em 4173.
-
-- [x] Promover frontend/assets/testes/configuração para a raiz, preservando a interface demo.
-- [x] Separar código simulado e módulos reais, com configuração explícita e sem fallback.
-- [x] Preparar Supabase Auth, contrato de Checkout e transportes de servidor Stripe/Twilio.
-- [x] Bloquear produção/segredos públicos e testar falhas, isolamento e idempotência.
-- [ ] Provisionar identidade sintética e homologar e-mail OTP real na caixa local.
-- [ ] Implementar autorização/RLS, cadastro com dois contatos, aceites e domínio seguindo `plan.md`.
-- [ ] Migrar/validar o hook de entrega para Meta, apenas WhatsApp, e endpoints autenticados com limites e auditoria.
-- [ ] Configurar credenciais de sandbox e executar a homologação com os provedores quando autorizado.
-
-`vercel.json` foi ajustado para a raiz apenas para manter a configuração coerente. Nada foi publicado; não houve envio de mensagens, criação de recursos Stripe ou alteração de projeto remoto.
-
-Verificação em 19/10/2026: typecheck da aplicação e dos transportes de servidor, 27 testes automatizados, builds demo/sandbox, jornada E2E da demonstração, layouts de 320–768 px, isolamento do sandbox e recarga offline da carteirinha/economia passaram. O CSS original foi conferido byte a byte; o build sandbox foi inspecionado e não contém fixtures, credenciais/sessões simuladas nem service worker demo. A entrega real de OTPs, chamadas Stripe/Twilio e testes em celulares físicos não foram executados nesta migração.
+`tests/hosted/smoke.mjs` exige `RKMED_HOSTED_KEY` publicável; consulta apenas homologação e não envia OTP nem cria pagamentos. Os testes conectados usam fixtures locais. Com provedores configurados, o teste de cadastro pode criar uma sessão Checkout de teste; não efetua pagamento. Não tratar transporte injetado, câmera emulada ou teste local como aceite em aparelho/provedor real.

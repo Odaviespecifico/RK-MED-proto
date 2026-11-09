@@ -1,3 +1,5 @@
+> **Histórico:** SMS Dev foi substituído pelo ClickSend em 09/11/2026 (D31). Para configurar cadastro/login atuais, use [ClickSend e OTP](clicksend-otp.md). Os detalhes abaixo registram a implementação anterior.
+
 # SMS Dev e OTP independente da RKMED
 
 O motor de códigos pertence à RKMED para **SMS e e-mail**. SMS Dev e Resend apenas entregam mensagens. Não configurar um provedor SMS no Supabase para este fluxo.

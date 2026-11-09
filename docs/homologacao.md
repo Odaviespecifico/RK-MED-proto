@@ -1,10 +1,10 @@
-> **OTP atual:** códigos de SMS/e-mail são gerados e validados pela RKMED. SMS Dev é somente transporte. Configuração e limites: [integração SMS Dev](smsdev-otp.md). A configuração de SMS nativo mencionada abaixo foi substituída por D29.
-
-# Decisão vigente: OTP de telefone por SMS
-
-A decisão atual substitui WhatsApp por SMS. Login oferece SMS ou e-mail; primeiro cadastro verifica ambos. O envio usa o provedor nativo configurado no Supabase Auth, com `SMS_MODE=supabase-native` e `SMS_ALLOWED_TEST_NUMBERS` no gateway. Desativar o hook Send SMS legado antes de habilitar o provedor nativo. Credenciais e entrega externa ainda precisam de configuração/aceite; referências a WhatsApp abaixo são históricas.
-
 # RKMED — ambiente funcional de testes
+
+> **Situação atual — 09/11/2026:** frontend conectado publicado, 17 migrations alinhadas, ClickSend/Resend configurados, webhook Stripe de teste e worker agendado. Ver [prontidão](prontidao-producao.md), [desenvolvimento](desenvolvimento.md) e [OTP atual](clicksend-otp.md).
+
+## Registro histórico de homologação
+
+Os relatos abaixo preservam as verificações anteriores. Referências a WhatsApp, SMS Dev, SMS nativo, ausência de publicação e comandos demo descrevem suas respectivas datas; não são instruções vigentes.
 
 **Decisão atual — 04/11/2026:** a API oficial do WhatsApp da Meta substitui o Twilio (D26 em [plan.md](../plan.md)). A migração do código de entrega ainda está pendente; referências ao transporte Twilio abaixo descrevem o legado e não devem ser usadas para configurar novos envios. A alternativa por SMS foi removida por decisão do usuário em 04/11/2026; códigos de telefone serão entregues apenas pelo WhatsApp. Supabase Auth e Resend permanecem.
 
@@ -82,7 +82,7 @@ O cadastro fica `incomplete` até confirmação do provedor. Após salvar a foto
 
 - `APP_ENV=local`, `APP_ORIGIN=http://127.0.0.1:5174`.
 - `STRIPE_SECRET_KEY`: preferir chave restrita de teste com permissões necessárias.
-- `STRIPE_TEST_ACCOUNT_ID`, `STRIPE_PRICE_ID`: conta sandbox esperada e preço mensal BRL 6960.
+- `STRIPE_TEST_ACCOUNT_ID`, `STRIPE_PRICE_ID`: conta sandbox esperada e preço mensal BRL 6990.
 - `STRIPE_WEBHOOK_SECRET`: segredo do encaminhamento/endpoint de testes.
 - `STRIPE_PORTAL_CONFIGURATION_ID`: plano fixo, sem troca de assinatura; cancelamento permitido somente no fim do período.
 

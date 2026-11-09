@@ -17,7 +17,7 @@ Execute `npm run env:init` em uma máquina nova. O comando cria os dois arquivos
 | Recursos visuais opcionais | Detecção facial local e mapa de parceiros | `VITE_FACE_DETECTION_MIN_CONFIDENCE`, `VITE_GOOGLE_MAPS_EMBED_KEY` |
 | Backend | Supabase Edge Functions, PostgreSQL com RPC/RLS e Storage privado; sem servidor Fastify separado | `APP_ENV`, `APP_ORIGIN`; credenciais internas do Supabase fornecidas pelo runtime |
 | Identificação e sessão | RKMED gera/verifica OTP de e-mail e SMS; adaptador interno emite sessão gerenciada pelo Supabase Auth | `OTP_HMAC_SECRET`; ver [OTP independente](smsdev-otp.md) |
-| Entrega de SMS | SMS Dev, sem validação de OTP pelo fornecedor | `SMSDEV_MODE`, `SMSDEV_API_KEY`, `SMS_ALLOWED_TEST_NUMBERS` |
+| Entrega de SMS | ClickSend, sem validação de OTP pelo fornecedor | `CLICKSEND_MODE`, `CLICKSEND_API_KEY`, `CLICKSEND_USERNAME`, `SMS_ALLOWED_TEST_NUMBERS` |
 | Entrega de e-mail | Resend para OTP e notificações transacionais | `RESEND_MODE`, `RESEND_API_KEY`, `RESEND_FROM`, `RESEND_ALLOWED_TEST_EMAILS` |
 | Assinaturas e Wedea | Stripe Checkout/Billing, Customer Portal, webhook assinado e Connect com transferências separadas | `STRIPE_SECRET_KEY`, `STRIPE_TEST_ACCOUNT_ID`, `STRIPE_PRICE_ID`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PORTAL_CONFIGURATION_ID`, `STRIPE_WEDEA_ACCOUNT_ID` |
 | Rotinas operacionais | `provider-jobs` concilia pagamentos, retoma transferências e envia notificações | `JOBS_SECRET`, `OPERATIONS_TEST_EMAIL` |
@@ -57,3 +57,12 @@ A revisão posterior à consolidação removeu a chave arquivada do protótipo q
 Criar `.env.prod` não habilita produção: o frontend e os adaptadores ainda recusam esse ambiente conforme o planejamento. Não há deploy ou troca de credenciais remotas nesta alteração.
 
 Referências: [Vite e variáveis públicas](https://vite.dev/guide/env-and-mode), [segredos de Edge Functions](https://supabase.com/docs/guides/functions/secrets).
+
+
+## Comandos atuais de frontend
+
+`npm run dev` e `npm run build` selecionam o frontend conectado ao banco configurado em `.env.test`. Para demonstração isolada: `dev:demo` e `build:demo` (saída `dist-demo`). `build:hosted` força frontend conectado e ambiente sandbox HTTPS, exigindo referência/URL/chave publicável remotas fornecidas pela Vercel. Sua saída é `dist`. `build:sandbox` continua disponível para QA local em `dist-sandbox`.
+
+A Vercel usa `build:hosted`; as variáveis públicas foram configuradas no projeto existente. A designação de target `production` da Vercel representa o domínio estável de homologação, e não habilita cobrança live ou `APP_ENV=production`. `.env.prod` permanece separado e bloqueado pelo runtime. Credenciais ClickSend de teste não foram copiadas para produção.
+
+D32: a homologação atual usa `SMS_ALLOWED_TEST_NUMBERS=*` e `RESEND_ALLOWED_TEST_EMAILS=*`, por autorização explícita do usuário. Os valores padrão vazios continuam fechados. A liberação não muda limites/consumo único do OTP nem o modo de teste Stripe.

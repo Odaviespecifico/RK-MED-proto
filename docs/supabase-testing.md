@@ -1,10 +1,10 @@
-> **OTP atual:** códigos de SMS/e-mail são gerados e validados pela RKMED. SMS Dev é somente transporte. Configuração e limites: [integração SMS Dev](smsdev-otp.md). A configuração de SMS nativo mencionada abaixo foi substituída por D29.
-
-# Decisão vigente: OTP de telefone por SMS
-
-A decisão atual substitui WhatsApp por SMS. Login oferece SMS ou e-mail; primeiro cadastro verifica ambos. O envio usa o provedor nativo configurado no Supabase Auth, com `SMS_MODE=supabase-native` e `SMS_ALLOWED_TEST_NUMBERS` no gateway. Desativar o hook Send SMS legado antes de habilitar o provedor nativo. Credenciais e entrega externa ainda precisam de configuração/aceite; referências a WhatsApp abaixo são históricas.
-
 # Supabase RKMED — implantação para testes
+
+> **Situação atual — 09/11/2026:** frontend conectado publicado, 17 migrations alinhadas, ClickSend/Resend configurados, webhook Stripe de teste e worker agendado. Ver [prontidão](prontidao-producao.md), [desenvolvimento](desenvolvimento.md) e [OTP atual](clicksend-otp.md).
+
+## Registro histórico de homologação
+
+Os relatos abaixo preservam as verificações anteriores. Referências a WhatsApp, SMS Dev, SMS nativo, ausência de publicação e comandos demo descrevem suas respectivas datas; não são instruções vigentes.
 
 Atualizado em 08/11/2026. Backend publicado por solicitação explícita do usuário.
 

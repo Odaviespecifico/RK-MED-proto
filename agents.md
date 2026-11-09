@@ -21,10 +21,10 @@ The application lives at the repository root (`src/`, `public/`, Vite config and
 ## Business invariants
 
 - First delivery priority is scanning the member QR and registering a purchase. Prove this with synthetic paid-member fixtures before integrating full enrollment/billing.
-- Facial processing detects presence of a face only. Stripe is confirmed; RKMED owns OTP generation and verification for both email and SMS; SMS Dev transports SMS only (D29). Supabase Auth remains the session store through an isolated server-side session bridge. Resend delivers verification and transactional emails. Existing Twilio code is legacy awaiting migration, not an approved delivery path; see D26 in `plan.md`.
+- Facial processing detects presence of a face only. Stripe is confirmed; RKMED owns OTP generation and verification for both email and SMS; ClickSend transports SMS only (D31, superseding the SMS Dev transport in D29). Supabase Auth remains the session store through an isolated server-side session bridge. Resend delivers verification and transactional emails. Existing Twilio code is legacy awaiting migration, not an approved delivery path; see D26 in `plan.md`.
 - Legal text is unapproved. Use `docs/legal-mocks/` only in tests with the exact visible AI warning; production must reject mock document versions.
 
-- Confirmed price: R$69.60/month (6960 cents). Payment failure immediately removes benefits; retries occur on D+0, D+1 and D+3. The seller must see ineligibility.
+- Confirmed price: R$69.90/month (6990 cents) — D30, superseding the earlier R$69.60 answer to match the existing Stripe price. Payment failure immediately removes benefits; retries occur on D+0, D+1 and D+3. The seller must see ineligibility.
 - Shared partner account plus employee code is confirmed. Directors see name, masked CPF, membership status/dates and savings, without contacts, photos, exports or mutations. Admins and RK support manage operational actions; only admins provision staff.
 - Admins/RK support reverse records from the admin panel without a time limit, retaining reasons and audit. Pilot size/date are not planning blockers per the user.
 
@@ -47,7 +47,7 @@ The application lives at the repository root (`src/`, `public/`, Vite config and
 - Roles and partner assignments must be server-controlled. Never trust editable user metadata, request-supplied roles, or a partner ID without verifying membership.
 - Mandatory MFA was declined. Protect staff operations with verified Supabase sessions, server-owned permissions, rate limits and audit. Existing admins provision staff using email/password for this version; never allow public self-assignment of staff privileges.
 - Do not expose service-role/secret keys, Stripe secrets, webhook secrets, or messaging credentials through `VITE_*`, browser bundles, logs, or git. Browser Supabase access, if adopted, uses only a publishable/anon key with tested RLS.
-- First registration requires email OTP and SMS OTP on the same Auth identity. Later login offers “Login com SMS” and “Login com email”, requiring only the chosen channel. RKMED issues/verifies both email and SMS challenges independently of Supabase OTP providers; use SMS Dev for transport and keep native Auth OTP delivery retired. See docs/smsdev-otp.md for the session bridge and configuration. Keep throttling, recipient allowlists and provider secrets server-side. No member PIN.
+- First registration requires email OTP and SMS OTP on the same Auth identity. Later login offers “Login com SMS” and “Login com email”, requiring only the chosen channel. RKMED issues/verifies both email and SMS challenges independently of Supabase OTP providers; use ClickSend for transport and keep native Auth OTP delivery retired. See docs/clicksend-otp.md for the session bridge and configuration. Keep throttling, recipient policy and provider secrets server-side. D32 explicitly opens homologation to any valid email/Brazilian phone through `*`; empty/default lists remain closed. No member PIN.
 
 - Use private member photos, short-lived authorized access, upload validation, and metadata stripping. Face detection does not establish identity or liveness.
 - Minimize personal data in logs and analytics. Never log CPF, PIN, QR credentials, auth links, access tokens, or full webhook payloads indiscriminately.

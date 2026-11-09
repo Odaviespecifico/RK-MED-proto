@@ -2,7 +2,7 @@
 
 **Esse texto deve ser modificado por ter sido inteiramente gerado por IA e serve apenas para testes.**
 
-Versão: `mock-2026-10-06`. Mostrar o aviso em cada mensagem de teste. Usar somente destinatários capturados pelo ambiente local; canal/provedor definitivo pendente.
+Versão: `mock-2026-10-06`. Mostrar o aviso nos modelos abaixo e nas páginas legais. O e-mail transacional de código de acesso (OTP) é uma mensagem de segurança e não leva o aviso; ver D31 em [plan.md](../../plan.md). Usar somente destinatários capturados pelo ambiente local; canal/provedor definitivo pendente.
 
 ## Boas-vindas
 
