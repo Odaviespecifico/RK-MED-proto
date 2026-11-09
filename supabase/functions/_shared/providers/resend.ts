@@ -67,6 +67,9 @@ export function createResendSandbox(env: Environment, transport: typeof fetch = 
         headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json', 'Idempotency-Key': `rkmed/${operation}` },
         body: JSON.stringify({ from, to: [to], subject, text, html }) })
       if (!result.ok) throw new Error('Entrega de e-mail recusada. Verifique a configuração do sandbox.')
+      const receipt = await result.json()
+      if (typeof receipt?.id !== 'string' || !/^[A-Za-z0-9-]{1,128}$/.test(receipt.id)) throw new Error('O provedor não confirmou o recebimento do e-mail.')
+      return { messageId: receipt.id as string }
     },
   }
 }

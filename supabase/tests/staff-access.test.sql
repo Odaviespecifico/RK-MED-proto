@@ -1,0 +1,42 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set local search_path=public,extensions;
+select no_plan();
+insert into auth.sessions(id,user_id,created_at,updated_at,aal) values
+('94000000-0000-4000-8000-000000000005','00000000-0000-4000-8000-000000000005',now(),now(),'aal1'),
+('94000000-0000-4000-8000-000000000006','00000000-0000-4000-8000-000000000006',now(),now(),'aal1'),
+('94000000-0000-4000-8000-000000000007','00000000-0000-4000-8000-000000000007',now(),now(),'aal1');
+select ok(not has_table_privilege('authenticated','private.staff_password_operations','select'),'Password operations are private');
+select ok(not has_function_privilege('authenticated','public.rk_backend_staff_authorize(uuid,uuid)','execute'),'Browser cannot impersonate administrator');
+select ok(not has_function_privilege('authenticated','public.rk_backend_staff_password_begin(uuid,uuid,uuid,integer,text,uuid,uuid)','execute'),'Password claims require service role');
+select ok(not has_function_privilege('anon','public.rk_staff_accounts(integer,timestamp with time zone,uuid,text)','execute'),'Anonymous cannot list staff');
+select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000006","role":"authenticated","session_id":"94000000-0000-4000-8000-000000000006"}',true);
+set local role authenticated;
+select throws_ok('select public.rk_staff_accounts()','42501','Acesso negado','Support cannot list internal accounts');
+select throws_ok($q$select public.rk_update_staff_access('00000000-0000-4000-8000-000000000007','admin',null,true,1,'Promover')$q$,'42501','Acesso negado','Support cannot promote accounts');
+reset role;
+select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000005","role":"authenticated","session_id":"94000000-0000-4000-8000-000000000005"}',true);
+set local role authenticated;
+select ok(not exists(select 1 from jsonb_array_elements(public.rk_staff_accounts()->'items') t where t->>'role' in ('member','pending')),'Staff listing excludes members and pending users');
+select is(jsonb_array_length(public.rk_staff_accounts(p_query=>'diretoria@rkmed.test')->'items'),1,'Staff search uses real account email');
+select throws_ok($q$select public.rk_update_staff_access('00000000-0000-4000-8000-000000000005','support',null,false,1,'Desativar')$q$,'P0001','Solicite a outro administrador a alteração do seu próprio acesso.','Administrator cannot remove own access');
+select throws_ok($q$select public.rk_update_staff_access('00000000-0000-4000-8000-000000000007','admin',null,true,999,'Promover')$q$,'P0001','Acesso alterado por outro operador. Atualize a lista.','Outdated revisions cannot overwrite changes');
+select throws_ok($q$select public.rk_update_staff_access('00000000-0000-4000-8000-000000000007','partner',null,true,1,'Vincular')$q$,'P0001','Estabelecimento inválido para este perfil.','Partner accounts require establishment assignment');
+select lives_ok($q$select public.rk_update_staff_access('00000000-0000-4000-8000-000000000007','viewer',null,false,1,'Desativação de teste')$q$,'Administrator disables another account');
+select is(jsonb_array_length(public.rk_staff_access_audit('00000000-0000-4000-8000-000000000007')),1,'Access change is audited');
+reset role;
+select is((select revision from private.roles where user_id='00000000-0000-4000-8000-000000000007'),2,'Access revision increments');
+select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000007","role":"authenticated","session_id":"94000000-0000-4000-8000-000000000007"}',true);
+set local role authenticated;
+select throws_ok('select public.rk_context()','42501','Acesso desativado. Procure a administração.','Inactive accounts cannot fall through to enrollment');
+reset role;
+select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000005","role":"authenticated","session_id":"94000000-0000-4000-8000-000000000005"}',true);
+set local role authenticated;
+select lives_ok($q$select public.rk_update_staff_access('00000000-0000-4000-8000-000000000007','viewer',null,true,2,'Reativação de teste')$q$,'Administrator reactivates account');
+reset role;
+select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000007","role":"authenticated","session_id":"94000000-0000-4000-8000-000000000007"}',true);
+set local role authenticated;
+select throws_ok('select public.rk_context()','42501','Acesso atualizado. Entre novamente.','Reactivation does not restore old sessions');
+reset role;
+select * from finish();
+rollback;

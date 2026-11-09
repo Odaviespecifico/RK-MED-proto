@@ -6,8 +6,12 @@ import type { CursorPage, PageCursor } from '../lib/pagination'
 
 export class PortalConnectionError extends Error {}
 export type PortalMember = { id: string; name: string; cpf: string; photoPath: string | null; cardToken: string; eligible: boolean; blocked: boolean; paidThrough: string | null; billingState: string; cancelAtPeriodEnd: boolean; joinedAt: string; email?: string | null; phone?: string | null }
-export type PortalContext = { userId: string; role: 'pending' | 'member' | 'partner' | 'admin' | 'support' | 'viewer'; partnerId?: string; member?: PortalMember; workSession?: { employeeId: string; employeeName: string; partnerId: string } }
-export type SupportRequest = { id: string; memberId: string; memberName: string; message: string; status: 'open' | 'answered' | 'closed'; response: string | null; createdAt: string; answeredAt: string | null }
+export type PortalContext = { userId: string; role: 'pending' | 'member' | 'partner' | 'admin' | 'support' | 'viewer'; partnerId?: string; partner?: PublicPartner & { isTest: boolean }; member?: PortalMember; workSession?: { employeeId: string; employeeName: string; partnerId: string } }
+export type SupportRequest = { id: string; memberId: string; memberName: string; message: string; status: 'open' | 'answered' | 'closed'; response: string | null; createdAt: string; answeredAt: string | null; deliveryStatus: 'pending' | 'failed' | 'sent' | null; deliveryAttempts: number }
+export type TestPartnerResult = { partnerId: string; name: string; email: string; employeeName: string; establishmentCode: string; isTest: true }
+export type StaffRole = 'admin' | 'support' | 'viewer' | 'partner'
+export type StaffAccount = { id: string; email: string; role: StaffRole; active: boolean; partnerId: string | null; partnerName: string | null; isTest: boolean; createdAt: string; lastSignInAt: string | null; revision: number }
+export type StaffAudit = { id: string; action: string; reason: string | null; createdAt: string; actorEmail: string | null }
 export type AdminOverview = {
   activeMembers: number
   purchases: number
@@ -41,11 +45,16 @@ export function portal(client: SupabaseClient) {
     context: () => rpc<PortalContext>('rk_context'),
     operationalSummary: () => rpc<OperationalSummary>('rk_operational_summary'),
     watchOperations: (changed: () => void, state: (value: OperationalConnection) => void) => watchOperations(client, changed, state),
-    staffPartners: () => rpc<(PublicPartner & { active: boolean; establishmentCode: string | null })[]>('rk_staff_partners'),
+    staffPartners: () => rpc<(PublicPartner & { active: boolean; isTest: boolean; establishmentCode: string | null })[]>('rk_staff_partners'),
     adminOverview: () => rpc<AdminOverview>('rk_admin_overview'),
     supportPage: (cursor: PageCursor | null = null, status = '') => rpc<CursorPage<SupportRequest>>('rk_support_requests', { p_at: cursor?.at || null, p_id: cursor?.id || null, p_status: status }),
     answerSupport: (id: string, response: string) => rpc<void>('rk_answer_support_request', { p_id: id, p_response: response }),
+    closeSupport: (id: string) => rpc<void>('rk_close_support_request', { p_id: id }),
+    retrySupportReply: (id: string) => rpc<void>('rk_retry_support_reply', { p_id: id }),
     openSupport: (message: string) => rpc<string>('rk_open_support_request', { p_message: message }),
+    staffAccounts: (cursor: PageCursor | null = null, query = '') => rpc<CursorPage<StaffAccount>>('rk_staff_accounts', { p_at: cursor?.at || null, p_id: cursor?.id || null, p_query: query }),
+    staffAudit: (id: string) => rpc<StaffAudit[]>('rk_staff_access_audit', { p_user: id }),
+    updateStaff: (account: StaffAccount, role: StaffRole, partner: string | null, active: boolean, reason: string) => rpc<void>('rk_update_staff_access', { p_user: account.id, p_role: role, p_partner: partner, p_active: active, p_revision: account.revision, p_reason: reason }),
     memberEconomy: () => rpc<MemberEconomy>('rk_member_economy'),
     async subscription() { return this.command<MemberSubscription>('subscription') },
     report: (filter: ReportFilter) => rpc<PurchaseReport>('rk_report', { p_from: filter.from, p_to: filter.to, p_partner: filter.partnerId }),

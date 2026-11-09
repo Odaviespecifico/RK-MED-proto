@@ -420,3 +420,14 @@ button:active:not(:disabled), .button:active:not(:disabled) { transform: transla
 
 .quick-partner-entry > .quick-partner { width: 100%; }
 .quick-partner-entry > .partner-location { margin: 0 0 8px; }
+
+.preserve-lines { white-space: pre-wrap; overflow-wrap: anywhere; }
+.support-thread,.staff-access-row,.staff-audit-row { padding: 16px 0; border-bottom: 1px solid #e8e1d6; overflow-wrap: anywhere; }
+.support-thread p,.staff-audit-row p { margin: 8px 0; }
+.support-answer { margin: 12px 0; padding-left: 14px; border-left: 3px solid #b59a6a; }
+.support-actions,.staff-access-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.staff-access-row small,.staff-audit-row small { display: block; color: #5f5a51; margin: 6px 0; font-size: 13px; }
+.staff-access-editor,.staff-access-create,.member-support-history { margin-top: 20px; padding-top: 20px; border-top: 1px solid #e8e1d6; }
+.staff-confirmation { padding: 16px; background: #f7f6f2; border: 1px solid #d8c7aa; border-radius: 8px; }
+.staff-access-actions .button { min-height: 44px; }
+@media (max-width: 480px) { .staff-access-actions { display: grid; grid-template-columns: 1fr; } .support-actions { width: 100%; } }

@@ -12,13 +12,20 @@ for (const rpc of ['rk_partners', 'rk_documents']) {
   assert.equal(response.status, 200, rpc)
   assert.ok(Array.isArray(await response.json()))
 }
-for (const rpc of ['rk_context', 'rk_admin_overview', 'rk_member_economy', 'rk_support_requests', 'rk_backend_pending']) {
+for (const rpc of ['rk_context', 'rk_admin_overview', 'rk_member_economy', 'rk_support_requests', 'rk_staff_accounts', 'rk_backend_pending']) {
   const response = await fetch(`${backend}/rest/v1/rpc/${rpc}`, { method: 'POST', headers, body: '{}' })
   assert.ok([401, 403].includes(response.status), `${rpc} recusado sem sessão`)
 }
 const work = await fetch(`${backend}/rest/v1/rpc/rk_start_work`, { method: 'POST', headers,
   body: JSON.stringify({ p_code: '0000', p_establishment_code: 'INVALID000' }) })
 assert.ok([401, 403].includes(work.status), 'Início de turno exige sessão autorizada')
+for (const [rpc, body] of [
+  ['rk_backend_test_partner_finish', { p_actor: '00000000-0000-4000-8000-000000000001', p_session: '00000000-0000-4000-8000-000000000002', p_operation: '00000000-0000-4000-8000-000000000003', p_owner: '00000000-0000-4000-8000-000000000004' }],
+  ['rk_backend_test_partner_release', { p_actor: '00000000-0000-4000-8000-000000000001', p_operation: '00000000-0000-4000-8000-000000000003', p_owner: '00000000-0000-4000-8000-000000000004' }],
+]) {
+  const response = await fetch(`${backend}/rest/v1/rpc/${rpc}`, { method: 'POST', headers, body: JSON.stringify(body) })
+  assert.ok([401, 403].includes(response.status), `${rpc} exige backend autorizado`)
+}
 const browser = await chromium.launch({ executablePath: '/usr/bin/brave-browser', headless: true, args: ['--no-sandbox', '--disable-gpu'] })
 try {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' })

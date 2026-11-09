@@ -81,3 +81,21 @@ Cartões e listas de parceiros oferecem **Ver no mapa** dentro da tela, inclusiv
 Mapas individuais só carregam ao abrir e são removidos ao fechar. O mapa agregado permite selecionar um parceiro. Sem conexão, não há iframe: o endereço fica disponível com orientação para reconectar. Respostas do Google não são adicionadas ao cache da PWA. Código do estabelecimento, funcionário, contatos de associados e dados de sessão não compõem URLs de mapa.
 
 Verificar com `node tests/partner-maps.mjs` (dev:demo em 5173 e dev:sandbox em 5174). Esse teste isola o transporte Google e cobre telas, teclado, troca de parceiro, offline e largura 360px; o carregamento real do provedor foi conferido separadamente. A precisão depende do endereço cadastrado e da resolução do provedor.
+
+## Suporte e acessos internos
+
+Em **Conta → Meus atendimentos**, o associado consulta mensagens/respostas e encerra solicitações. Em **Admin → Suporte**, admin/suporte respondem e acompanham a fila: aguardando, falha ou aceito pelo provedor. Reenvio manual só está disponível em falhas; o worker agendado processa a fila automaticamente. Encerramento preserva resposta e histórico; não cancela uma resposta já enfileirada. Suporte não depende da Stripe para enviar e-mail.
+
+Em **Admin → Equipe → Acessos internos**, admin busca contas, altera perfil/estabelecimento/situação, redefine senha e consulta auditoria. Senha inicial e nova senha têm 12–128 caracteres e são comunicadas ao responsável por canal seguro; o sistema não envia senhas por e-mail. A própria conta exige outro administrador para alterações. Desativação/alteração/redefinição bloqueiam as sessões anteriores nas RPCs da aplicação. A reativação exige novo login. Contas de associados não aparecem nessa gestão.
+
+Verificação local adicional: `node --experimental-strip-types tests/connected/staff-access.mjs` usa Auth/RPC reais e remove sua identidade sintética; `node tests/connected/support-staff-ui.mjs` exige `dev:sandbox`, testa a 360px e remove seu atendimento/fila sintéticos. Ambos aceitam somente Docker local. Testes de transporte injetam o provedor e não enviam mensagens reais.
+
+## Criar parceiro de teste na homologação
+
+Entre como administrador e abra **Parceiros → Criar parceiro de teste**. Preencha estabelecimento, desconto, e-mail/senha e primeiro funcionário/código. Revise e confirme. Guarde a senha e o código do funcionário: o resultado mostra somente o e-mail e o código do estabelecimento. Entre por **Acesso da equipe** com e-mail/senha; no balcão, informe os códigos do estabelecimento e do funcionário.
+
+O parceiro fica ativo e marcado como teste na gestão; não aparece na landing, no diretório ou nos mapas dos associados. Sua conta aparece em **Equipe → Acessos internos**, onde pode ser desativada ou ter a senha redefinida. Cadastro e compras continuam no banco real de homologação, sujeitos às regras normais de elegibilidade; não se cria associado pago nem se habilita cobrança live.
+
+Se houver interrupção, use **Verificar e concluir cadastro**. Após recarregar a página, o mesmo administrador pode preencher novamente os mesmos dados, e-mail e código de funcionário para retomar a reserva. Uma conta Auth já criada é reutilizada; a senha informada na primeira criação permanece, podendo ser redefinida em Equipe após concluir. Contas pendentes não conseguem operar nem virar associados. Credenciais ficam somente na memória da tela e no Auth/hash do código, nunca no armazenamento persistente do navegador ou auditoria.
+
+Testes adicionais: `node --experimental-strip-types tests/connected/test-partner.mjs` valida recuperação/concorrência com Auth/Postgres locais. `node tests/connected/test-partner-ui.mjs` exige `dev:sandbox` e `functions:serve`, executa o fluxo completo a 360px e remove sua conta/estabelecimento sintéticos locais. Os helpers recusam destinos diferentes do Docker local.

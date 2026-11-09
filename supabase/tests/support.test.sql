@@ -26,7 +26,7 @@ set local role authenticated;
 select is(public.rk_context()->'member'->>'email','ana@rkmed.test','Member context exposes the own verified e-mail');
 select is(public.rk_context()->'member'->>'phone',current_setting('rkmed.test.phone'),'Member context masks the own phone');
 select is(public.rk_member_economy()->>'purchases',current_setting('rkmed.test.purchases'),'Member economy counts persisted purchases excluding reversals');
-select throws_ok('select public.rk_support_requests()','42501','Acesso negado','Member cannot list support messages');
+select ok(not exists(select 1 from jsonb_array_elements(public.rk_support_requests()->'items') t where t->>'memberId'<>'00000000-0000-4000-8000-000000000001'),'Member reads only own support messages');
 select throws_ok('select public.rk_admin_overview()','42501','Acesso negado','Member cannot read the administration overview');
 select throws_ok('select * from private.support_requests','42501',null::text,'Direct support reads are denied');
 select set_config('rkmed.test.support',public.rk_open_support_request('Preciso de ajuda com a mensalidade.')::text,true);
@@ -68,5 +68,19 @@ select is(jsonb_array_length(public.rk_support_requests(p_status => 'answered')-
 select is(public.rk_admin_overview()->>'openSupport','0','Overview reflects the answered request');
 reset role;
 
+-- RF-SUP: delivery idempotency, ownership and closing preserve the original reply.
+select is((select count(*) from private.notification_outbox where event_key='support.answer:'||current_setting('rkmed.test.support')),1::bigint,'One queued email per answered ticket');
+set local role authenticated;
+select lives_ok(format('select public.rk_answer_support_request(%L,''Resposta de teste'')',current_setting('rkmed.test.support')),'Repeated identical reply is idempotent');
+select throws_ok(format('select public.rk_answer_support_request(%L,''Outra resposta'')',current_setting('rkmed.test.support')),'P0001','Solicitação já respondida ou encerrada. Atualize a lista.','Answered text cannot be overwritten');
+select lives_ok(format('select public.rk_close_support_request(%L)',current_setting('rkmed.test.support')),'Support closes the request');
+reset role;
+select is((select response from private.support_requests where id=current_setting('rkmed.test.support')::uuid),'Resposta de teste','Closing retains the answer');
+select ok(not has_function_privilege('authenticated','public.rk_backend_support_reply(uuid,uuid)','execute'),'Browser cannot read delivery recipients');
+select set_config('request.jwt.claims','{"role":"service_role"}',true);
+set local role service_role;
+select is(public.rk_backend_support_reply(current_setting('rkmed.test.support')::uuid,'00000000-0000-4000-8000-000000000002'),null::jsonb,'Wrong member cannot receive another ticket');
+select is(public.rk_backend_support_reply(current_setting('rkmed.test.support')::uuid,'00000000-0000-4000-8000-000000000001')->>'response','Resposta de teste','Delivery reads the saved answer');
+reset role;
 select * from finish();
 rollback;

@@ -4,6 +4,8 @@ import type { BackendMember } from '../_shared/billing.ts'
 import { sanitizePhoto } from '../_shared/photo.ts'
 import { StripeSandboxError } from '../_shared/providers/stripe.ts'
 import { PublicError, boundedBody, response } from '../_shared/http.ts'
+import { createTestPartner } from '../_shared/test-partner.ts'
+import { manageStaff, verifiedSessionId } from '../_shared/staff-access.ts'
 
 const env = Deno.env.toObject()
 Deno.serve(async request => {
@@ -20,9 +22,9 @@ Deno.serve(async request => {
     const { data: context, error: denied } = await client.rpc('rk_context')
     if (denied || !context) return response({ error: 'Sessão expirada ou acesso negado.' }, 403, origin)
     const body = JSON.parse(await boundedBody(request, 7 * 1024 * 1024))
-    if (!['checkout', 'portal', 'cancel', 'resume', 'subscription', 'collection', 'staff', 'photo'].includes(body.action)) return response({ error: 'Ação não disponível.' }, 400, origin)
+    if (!['checkout', 'portal', 'cancel', 'resume', 'subscription', 'collection', 'staff', 'photo', 'test-partner'].includes(body.action)) return response({ error: 'Ação não disponível.' }, 400, origin)
     const staff = ['admin', 'support'].includes(context.role)
-    if ((['checkout', 'portal', 'cancel', 'resume', 'subscription', 'photo'].includes(body.action) && context.role !== 'member') || (body.action === 'collection' && !staff) || (body.action === 'staff' && context.role !== 'admin')) return response({ error: 'Acesso negado.' }, 403, origin)
+    if ((['checkout', 'portal', 'cancel', 'resume', 'subscription', 'photo'].includes(body.action) && context.role !== 'member') || (body.action === 'collection' && !staff) || (['staff', 'test-partner'].includes(body.action) && context.role !== 'admin')) return response({ error: 'Acesso negado.' }, 403, origin)
     const db = createClient(env.SUPABASE_URL!, env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } })
     await trustedRpc(db, 'rk_backend_rate', { p_actor: data.user.id, p_action: body.action })
     if (body.action === 'photo') {
@@ -34,13 +36,9 @@ Deno.serve(async request => {
       await trustedRpc(db, 'rk_backend_photo', { p_member: data.user.id })
       return response({ saved: true }, 200, origin)
     }
+    if (body.action === 'test-partner') return response(await createTestPartner(db, data.user.id, verifiedSessionId(authorization.slice(7)), body, env.APP_ENV || ''), 200, origin)
     if (body.action === 'staff') {
-      if (!['admin', 'support', 'viewer', 'partner'].includes(body.role) || typeof body.email !== 'string' || typeof body.password !== 'string' || body.password.length < 12) throw new PublicError('Dados de acesso inválidos. Use senha com pelo menos 12 caracteres.')
-      const created = await db.auth.admin.createUser({ email: body.email.trim(), password: body.password, email_confirm: true })
-      if (created.error || !created.data.user) throw new PublicError('Não foi possível criar o acesso. Verifique os dados.')
-      try { await trustedRpc(db, 'rk_backend_role', { p_user: created.data.user.id, p_role: body.role, p_partner: body.role === 'partner' ? body.partnerId : null }) }
-      catch (error) { await db.auth.admin.deleteUser(created.data.user.id); throw error }
-      return response({ created: true }, 200, origin)
+      return response(await manageStaff(db, data.user.id, verifiedSessionId(authorization.slice(7)), body), 200, origin)
     }
     const operation = body.operationId
     if (typeof operation !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(operation)) throw new PublicError('Operação inválida.')

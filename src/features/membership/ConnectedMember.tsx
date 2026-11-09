@@ -1,4 +1,5 @@
 import { PartnerLocation } from '../../components/PartnerLocation'
+import { MemberSupportHistory } from './MemberSupportHistory'
 import { useCallback, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import QRCode from 'qrcode'
@@ -30,6 +31,7 @@ export function ConnectedMember({ api, member, partners, online, refresh, snapsh
   const [supportBusy, setSupportBusy] = useState(false)
   const [supportNotice, setSupportNotice] = useState('')
   const [supportError, setSupportError] = useState('')
+  const [supportRevision, setSupportRevision] = useState(0)
   const load = useCallback((cursor: PageCursor | null) => online ? api.purchasesPage(cursor, cursor === null) : Promise.resolve(savedHistoryPage(snapshot?.purchases || [], cursor)), [api, online, snapshot])
   const history = useCursorPage(load, online || !!snapshot)
   const [error, setError] = useState('')
@@ -82,8 +84,9 @@ export function ConnectedMember({ api, member, partners, online, refresh, snapsh
     setSupportBusy(true); setSupportError(''); setSupportNotice('')
     try {
       await api.openSupport(message)
+      setSupportRevision(value => value + 1)
       setSupportMessage('')
-      setSupportNotice('Mensagem enviada. A equipe RKMED responderá pelo contato da sua conta.')
+      setSupportNotice('Solicitação registrada. A resposta aparecerá aqui e será enviada por e-mail.')
     } catch (e) { setSupportError(e instanceof Error ? e.message : 'Não foi possível enviar a mensagem.') } finally { setSupportBusy(false) }
   }
   const recordedPurchases = economy?.purchases ?? snapshot?.purchases.filter(p => !p.reversedAt).length ?? history.data?.items.filter(p => !p.reversedAt).length ?? 0
@@ -100,7 +103,7 @@ export function ConnectedMember({ api, member, partners, online, refresh, snapsh
   const support = <section className="surface-card support-card">
     <HelpCircle size={25} />
     <h3>Precisa de ajuda?</h3>
-    <p>Escreva para a equipe RKMED. A resposta será enviada pelo contato verificado da sua conta.</p>
+    <p>Escreva para a equipe RKMED. A resposta ficará no seu histórico e será enviada ao seu e-mail verificado.</p>
     <form onSubmit={sendSupport}>
       <label className="field-label">Sua mensagem<textarea className="input" required minLength={5} maxLength={2000} value={supportMessage} onChange={e => setSupportMessage(e.target.value)} placeholder="Como podemos ajudar?" disabled={!online || supportBusy} /></label>
       <Button type="submit" disabled={!online || supportBusy}>{supportBusy ? 'Enviando...' : 'Enviar mensagem'}</Button>
@@ -108,6 +111,7 @@ export function ConnectedMember({ api, member, partners, online, refresh, snapsh
     {supportNotice && <p role="status" className="inline-success">{supportNotice}</p>}
     {supportError && <p role="alert" className="inline-error">{supportError}</p>}
     {!online && <small>Mensagens exigem conexão.</small>}
+    <MemberSupportHistory api={api} online={online} revision={supportRevision} />
   </section>
   return <><MemberInstallPrompt />
     {section === 'inicio' && <>
