@@ -1,4 +1,5 @@
 import { startMemberSession } from '../_shared/session-bridge.ts'
+import { requestPasswordRecovery } from '../_shared/password-recovery.ts'
 import { createClient } from '@supabase/supabase-js'
 import { trustedRpc } from '../_shared/backend-rpc.ts'
 import { boundedBody, PublicError, response } from '../_shared/http.ts'
@@ -15,6 +16,10 @@ Deno.serve(async request => {
   try {
     if (!env.OTP_HMAC_SECRET || env.OTP_HMAC_SECRET.length < 32) return response({ error: 'Verificação não configurada.' }, 503, origin)
     const body = JSON.parse(await boundedBody(request, 2048))
+    if (body.action === 'recover') {
+      const db = createClient(env.SUPABASE_URL!, env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } })
+      return response(await requestPasswordRecovery(db, env, body.email), 200, origin)
+    }
     if (!['request','verify'].includes(body.action) || !['email','sms'].includes(body.channel) || !['login','signup','attach'].includes(body.purpose)) throw new PublicError('Solicitação inválida.')
     const channel = body.channel as OtpChannel
     const purpose = body.purpose as OtpPurpose

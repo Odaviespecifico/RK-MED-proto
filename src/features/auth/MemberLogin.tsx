@@ -69,7 +69,7 @@ export function MemberLogin({ auth, onAuthenticated, go, online, demo = false, d
       {notice && <div className="inline-success" role="status"><CheckCircle2 size={16} />{notice}</div>}
       {error && <div className="inline-error" role="alert"><CircleAlert size={16} />{error}</div>}
       {demoHint}
-      <p className="auth-foot">Ainda não faz parte? <button onClick={() => go('/cadastro')}>Comece aqui <ArrowRight size={14} /></button></p>
+      <p className="auth-foot"><button type="button" onClick={() => go('/esqueci-senha')}>Esqueci minha senha</button></p><p className="auth-foot">Ainda não faz parte? <button onClick={() => go('/cadastro')}>Comece aqui <ArrowRight size={14} /></button></p>
     </div></main>
   </div>
 }

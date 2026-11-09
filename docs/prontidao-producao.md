@@ -1,8 +1,10 @@
-# Prontidão para produção — 09/11/2026
+# Prontidão e liberação para produção — 09/11/2026
 
 **Resultado:** homologação publicada e conectada ao banco real. Produção comercial ainda não liberada.
 
-Frontend: https://rk-med-proto.vercel.app — deploy `dpl_J2pbGLG1qTctsJ6Xhg1LHYhy8qa6`. Backend: projeto Supabase `chuyompxoctmpawhfmyb`, ambiente `sandbox`, 20 migrations. A publicação usa o conteúdo atual do workspace; nenhuma alteração foi commitada/enviada ao GitHub nesta rodada.
+Este é o documento principal para decidir e conduzir a liberação. Consulte também [ambientes](ambientes.md) para variáveis e [desenvolvimento](desenvolvimento.md) para comandos locais e publicação de homologação.
+
+Frontend de homologação: https://rk-med-proto.vercel.app — último deploy registrado `dpl_J2pbGLG1qTctsJ6Xhg1LHYhy8qa6`. Backend: projeto Supabase `chuyompxoctmpawhfmyb`, ambiente `sandbox`, 20 migrations aplicadas. O workspace contém uma migration adicional de recuperação de senha e alterações de frontend/Edge Function ainda não publicadas nem registradas como validadas. A homologação hospedada permanece na versão anterior até uma publicação explícita.
 
 ## Entregue e verificado
 
@@ -32,6 +34,27 @@ O banco hospedado começou e terminou a verificação sem associados, parceiros 
 - Validar desempenho hospedado e configuração fiscal com os responsáveis. Stripe Tax continua desabilitado; nenhum registro fiscal foi presumido.
 
 Critério de liberação: todos os itens de aceite e bloqueios acima precisam de evidência. Não usar o sucesso de testes locais ou o deploy da Vercel como substituto dessa validação.
+
+## Procedimento de liberação comercial
+
+**Este procedimento ainda não pode ser executado.** O código e os adaptadores ativos recusam `APP_ENV=production`; `build:prod` é reservado e mantém essa recusa. Não promover o deploy estável atual, não apontar o domínio comercial para o Supabase de homologação e não colocar chaves live em `.env.test`.
+
+Quando os bloqueios acima forem encerrados, conduzir a liberação nesta ordem:
+
+1. **Fechar e registrar o aceite:** resolver os bloqueios e critérios de homologação; atualizar esta página com evidências, data, responsáveis e versão exata do código. Obter aprovação dos responsáveis por operação, jurídico e financeiro.
+2. **Preparar ambientes isolados:** criar projeto Supabase e projeto/target Vercel próprios para produção. Separar domínio, banco, Storage, Auth, webhooks, segredos, logs, backups e dados. Revisar que previews e homologação não possam acessar recursos live.
+3. **Habilitar produção no código:** implementar e revisar suporte explícito a `APP_ENV=production` nos validadores de frontend, Edge Functions e provedores. Definir configurações de produção sem permissões de teste, mantendo homologação isolada. Só então habilitar `build:prod` e validar o artefato resultante.
+4. **Preparar Supabase:** revisar migrations desde uma base vazia, grants, RLS, funções privilegiadas, Auth URLs/redirects/hooks, políticas de senha, limites e Storage privado. Configurar secrets somente no projeto de produção. Fazer backup antes de cada alteração de schema; aplicar migrations versionadas sem reset nem seeds de teste; verificar histórico e políticas após cada lote.
+5. **Preparar provedores live:** configurar credenciais e remetentes de produção de ClickSend/Resend, Stripe live, Connect/Wedea, webhook com endpoint e assinatura próprios, portal de cobrança e worker agendado. Confirmar destinatários, limites, idempotência e alertas sem reutilizar contas ou segredos de teste.
+6. **Preparar operação e recuperação:** ativar monitoramento e alertas, retenção e acesso aos logs, backups de banco e fotos, restauração ensaiada, responsáveis de plantão e procedimentos para indisponibilidade, vazamento, cobrança incorreta e reversão de versão/migration.
+7. **Publicar primeiro em validação controlada:** aplicar o artefato ao target de produção sem abrir tráfego amplo. Executar smoke checks sem dados reais desnecessários; validar cadastro, recuperação de senha, acesso por perfil, pagamento e eventos Stripe em configuração live controlada, notificações, fotos, backup e alarmes. Conferir que nenhum caminho de teste/mock esteja ativo.
+8. **Liberar e observar:** apontar o domínio comercial, acompanhar métricas e filas, confirmar primeiro ciclo de cobrança e atendimento. Definir previamente o critério de rollback; se houver risco para dados ou dinheiro, interromper operações e seguir o procedimento de recuperação, sem apagar registros financeiros.
+
+Após cada etapa, registrar projeto/ambiente, versão do deploy, identificadores de migrations, verificações realizadas, resultado, operador e horário. Nunca registrar chaves, tokens, senhas, links de recuperação ou dados pessoais nos documentos.
+
+### Alterações locais ainda não publicadas
+
+O fluxo de recuperação de senha para associados, parceiros e equipe foi iniciado no workspace, com nova migration de limite de solicitações, envio por Resend e callback de Auth. Ainda não está aplicado ao Supabase hospedado nem publicado na Vercel, e não conta como aceite até completar validação e publicação em homologação. A migration remota atual continua em 20; a alteração nova deve ser aplicada como migration seguinte, sem resetar o banco.
 
 D33: início de turno exige código do estabelecimento e do funcionário, com validação contra o parceiro autenticado. Códigos visíveis somente na gestão autorizada de parceiros; seleção livre removida.
 

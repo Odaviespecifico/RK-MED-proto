@@ -12,6 +12,7 @@ import { WorkspaceSidebar } from '../components/workspace'
 import { Landing } from '../features/public/Landing'
 import { LegalDocument } from '../features/public/LegalDocument'
 import { MemberLogin } from '../features/auth/MemberLogin'
+import { ForgotPassword, SetNewPassword } from '../features/auth/PasswordRecovery'
 import { PartnerLocation } from '../components/PartnerLocation'
 import { createSupabase } from '../integrations/supabase'
 import { createMemberAuth } from '../integrations/auth'
@@ -46,6 +47,23 @@ export default function SandboxApp({ config }: { config: PublicConfig }) {
   }
   async function reload() { await refresh(); setPartners(await api.partners()) }
   useEffect(() => {
+    const fragment = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+    const url = new URL(window.location.href)
+    const recoveryFragment = fragment.get('type') === 'recovery'
+    const recoveryCode = url.pathname === '/redefinir-senha' && url.searchParams.has('code')
+    if (!recoveryFragment && !recoveryCode) return
+    // Remove one-time credentials from the address bar before exchanging them.
+    history.replaceState({}, '', `${url.pathname}${recoveryCode ? '' : url.search}`)
+    const finish = recoveryCode
+      ? client.auth.exchangeCodeForSession(url.searchParams.get('code')!)
+      : fragment.get('access_token') && fragment.get('refresh_token')
+        ? client.auth.setSession({ access_token: fragment.get('access_token')!, refresh_token: fragment.get('refresh_token')! })
+        : Promise.resolve({ error: new Error('Link inválido.') })
+    void finish.then(({ error }) => {
+      if (!error) { history.replaceState({}, '', '/redefinir-senha'); setPath('/redefinir-senha') }
+    })
+  }, [client])
+  useEffect(() => {
     const pop = () => setPath(window.location.pathname)
     const connection = () => setOnline(navigator.onLine)
     window.addEventListener('popstate', pop); window.addEventListener('online', connection); window.addEventListener('offline', connection)
@@ -54,7 +72,7 @@ export default function SandboxApp({ config }: { config: PublicConfig }) {
   useEffect(() => {
     let active = true
     // Schedule outside the Auth callback to avoid awaiting Supabase calls while its lock is held.
-    const { data } = client.auth.onAuthStateChange((event, session) => { if (event === 'SIGNED_OUT') { offlineAccount(null); setSnapshot(null); revision.current++; setContext(null); setLoading(false) } else { if (event === 'SIGNED_IN') offlineAccount(session?.user.id || null); setTimeout(() => { if (active) void refresh() }, 0) } })
+    const { data } = client.auth.onAuthStateChange((event, session) => { if (event === 'PASSWORD_RECOVERY') { setPath('/redefinir-senha'); history.replaceState({}, '', '/redefinir-senha'); setLoading(false) } if (event === 'SIGNED_OUT') { offlineAccount(null); setSnapshot(null); revision.current++; setContext(null); setLoading(false) } else { if (event === 'SIGNED_IN') offlineAccount(session?.user.id || null); setTimeout(() => { if (active) void refresh() }, 0) } })
     void refresh()
     api.partners().then(value => { if (active) { setPartners(value); setPartnersError('') } })
       .catch(() => { if (active) setPartnersError('Não foi possível carregar a rede de parceiros. Recarregue a página para tentar novamente.') })
@@ -90,7 +108,9 @@ export default function SandboxApp({ config }: { config: PublicConfig }) {
   return <>
     <a className="skip-link" href="#main-content">Ir para o conteúdo</a>
     <div id="main-content" tabIndex={-1}>
-      {path === '/entrar' ? <MemberLogin auth={auth} onAuthenticated={() => { void refresh(); go('/app') }} go={go} online={online} />
+      {path === '/esqueci-senha' ? <ForgotPassword client={client} online={online} go={go} />
+        : path === '/redefinir-senha' ? <SetNewPassword client={client} go={go} />
+        : path === '/entrar' ? <MemberLogin auth={auth} onAuthenticated={() => { void refresh(); go('/app') }} go={go} online={online} />
         : staffLogin ? <StaffLogin online={online} go={go} login={async (email, password) => { const { error } = await client.auth.signInWithPassword({ email, password }); if (error) throw new Error('E-mail ou senha inválidos.'); try { const result = await api.context(); setContext(result); go(result.role === 'partner' ? '/parceiro' : ['admin', 'support', 'viewer'].includes(result.role) ? '/admin' : '/app') } catch (error) { await client.auth.signOut({ scope: 'local' }); throw error } }} />
         : restricted ? !online && path.startsWith('/app') && snapshot ? <div className="member-main"><Button variant="ghost" onClick={() => void logout()}>Sair</Button><Suspense fallback={<p>Carregando cartão salvo...</p>}><Member key={snapshot.account} api={api} member={snapshot.member} partners={snapshot.partners} online={false} refresh={refresh} snapshot={snapshot} section={memberSection} go={go} /></Suspense></div> : loading ? <div className="gate-page" role="status">Verificando sua sessão...</div>
           : !online ? <Gate icon={<WifiOff />} title="Conexão necessária" detail="Conecte-se para consultar os dados atualizados. Operações do balcão e da equipe exigem conexão." action="Voltar ao início" onAction={() => go('/')} />
@@ -111,5 +131,5 @@ function StaffLogin({ online, login, go }: { online: boolean; login: (email: str
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   async function submit(e: FormEvent) { e.preventDefault(); if (!online || busy) return; setBusy(true); setError(''); try { await login(email.trim(), password); setPassword('') } catch (e) { setError(e instanceof Error ? e.message : 'Acesso indisponível.') } finally { setBusy(false) } }
-  return <main className="partner-entry"><div className="partner-entry-card"><Brand /><h1>Acesso da equipe</h1><p>Entre com a conta cadastrada para seu estabelecimento ou para a equipe RKMED.</p><form onSubmit={submit}><label className="field-label">E-mail<input className="input" type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} required /></label><label className="field-label">Senha<input className="input" type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} required /></label><Button type="submit" className="full" disabled={!online || busy}>{busy ? 'Entrando...' : 'Entrar'}</Button></form>{error && <p className="inline-error" role="alert">{error}</p>}<button className="text-link" onClick={() => go('/')}>Voltar ao início</button></div></main>
+  return <main className="partner-entry"><div className="partner-entry-card"><Brand /><h1>Acesso da equipe</h1><p>Entre com a conta cadastrada para seu estabelecimento ou para a equipe RKMED.</p><form onSubmit={submit}><label className="field-label">E-mail<input className="input" type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} required /></label><label className="field-label">Senha<input className="input" type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} required /></label><Button type="submit" className="full" disabled={!online || busy}>{busy ? 'Entrando...' : 'Entrar'}</Button></form>{error && <p className="inline-error" role="alert">{error}</p>}<button className="text-link" type="button" onClick={() => go('/esqueci-senha')}>Esqueci minha senha</button><button className="text-link" onClick={() => go('/')}>Voltar ao início</button></div></main>
 }

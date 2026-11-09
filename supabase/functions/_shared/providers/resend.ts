@@ -55,13 +55,14 @@ function codeContent(subject: string, code: string) {
 
 export function createResendSandbox(env: Environment, transport: typeof fetch = fetch) {
   return {
-    async send(to: string, subject: string, text: string, operation: string, code?: string) {
+    async send(to: string, subject: string, text: string, operation: string, code?: string, actionLink?: string) {
       const allowed = (env.RESEND_ALLOWED_TEST_EMAILS || '').split(',').map(email => email.trim().toLowerCase())
       if (!['local', 'sandbox'].includes(env.APP_ENV || '') || env.RESEND_MODE !== 'transactional-sandbox'
         || !env.RESEND_API_KEY || !env.RESEND_FROM || (!allowed.includes('*') && !allowed.includes(to.toLowerCase())) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) throw new Error('Entrega de e-mail de teste não configurada ou destinatário não autorizado.')
       const from = env.RESEND_FROM.includes('<') ? env.RESEND_FROM : `RKMED <${env.RESEND_FROM}>`
       const html = code
         ? layout(subject, codeContent(subject, code), text)
+        : actionLink ? layout(subject, `<h1 style="margin:0 0 16px;font-family:Georgia,'Times New Roman',serif;font-size:24px;line-height:1.25;font-weight:700;color:${palette.ink};">${escapeHtml(subject)}</h1>${paragraphs(text)}<p style="margin:24px 0;text-align:center;"><a href="${escapeHtml(actionLink)}" style="display:inline-block;padding:14px 24px;border-radius:8px;background:${palette.deep};color:#fff;text-decoration:none;font-weight:700;">Redefinir minha senha</a></p>`, text)
         : layout(subject, `<h1 style="margin:0 0 16px;font-family:Georgia,'Times New Roman',serif;font-size:24px;line-height:1.25;font-weight:700;color:${palette.ink};">${escapeHtml(subject)}</h1>${paragraphs(text)}`, text)
       const result = await transport('https://api.resend.com/emails', { method: 'POST', redirect: 'error', signal: AbortSignal.timeout(10_000),
         headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json', 'Idempotency-Key': `rkmed/${operation}` },
