@@ -1,5 +1,7 @@
+import { StaffRegistration } from './StaffRegistration'
+import { KeyRound, History } from 'lucide-react'
+import { EmptyState } from '../../components/EmptyState'
 import { useCallback, useEffect, useState } from 'react'
-import type { FormEvent } from 'react'
 import type { Portal, StaffAccount, StaffAudit, StaffRole } from '../../integrations/portal'
 import type { PageCursor } from '../../lib/pagination'
 import { useCursorPage } from '../../lib/useCursorPage'
@@ -10,14 +12,13 @@ import { shortDate } from '../../lib/format'
 const roles: Record<StaffRole, string> = { partner: 'Parceiro', support: 'Suporte RKMED', viewer: 'Diretoria', admin: 'Administrador' }
 const auditNames: Record<string, string> = { 'staff.created': 'Acesso criado', 'staff.provision': 'Acesso criado', 'staff.access.update': 'Permissões ou situação alteradas', 'staff.password.requested': 'Redefinição de senha solicitada', 'staff.password.succeeded': 'Senha redefinida', 'staff.password.failed': 'Falha na redefinição de senha' }
 
-export function StaffAccess({ api, actorId, online }: { api: Portal; actorId: string; online: boolean }) {
+export function StaffAccess({ api, actorId, online, revision = 0 }: { api: Portal; actorId: string; online: boolean; revision?: number }) {
   const [query, setQuery] = useState('')
   const [search, setSearch] = useState('')
   useEffect(() => { const timer = setTimeout(() => setSearch(query.trim()), 300); return () => clearTimeout(timer) }, [query])
   const load = useCallback((cursor: PageCursor | null) => api.staffAccounts(cursor, search), [api, search])
-  const page = useCursorPage(load, online)
+  const page = useCursorPage(load, online, revision)
   const [partners, setPartners] = useState<Awaited<ReturnType<Portal['staffPartners']>>>([])
-  const [createRole, setCreateRole] = useState<StaffRole>('partner')
   const [selected, setSelected] = useState<StaffAccount | null>(null)
   const [mode, setMode] = useState<'edit' | 'password'>('edit')
   const [role, setRole] = useState<StaffRole>('support')
@@ -57,16 +58,6 @@ export function StaffAccess({ api, actorId, online }: { api: Portal; actorId: st
     catch (error) { setError(error instanceof Error ? error.message : 'Não foi possível concluir a operação.'); return false }
     finally { setBusy(false); page.refresh() }
   }
-  async function create(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const form = event.currentTarget; const data = new FormData(form)
-    const success = await run(async () => {
-      await api.command('staff', { staffAction: 'create', operationId: crypto.randomUUID(), email: String(data.get('email')),
-        password: String(data.get('password')), role: createRole, partnerId: createRole === 'partner' ? String(data.get('partner')) : null })
-    }, 'Acesso criado. A senha inicial deve ser comunicada ao responsável por um canal seguro.')
-    if (success) { form.reset(); setCreateRole('partner') }
-    else { const field = form.elements.namedItem('password'); if (field instanceof HTMLInputElement) field.value = '' }
-  }
   async function commit() {
     if (!selected || !confirming) return
     const account = selected
@@ -80,7 +71,7 @@ export function StaffAccess({ api, actorId, online }: { api: Portal; actorId: st
   }
   const change = () => setConfirming(false)
   return <section className="surface-card counter-flow" aria-label="Acessos internos">
-    <div className="small-section-head"><h2>Acessos internos</h2><Button variant="outline" disabled={!online || busy} onClick={() => page.refresh()}>Atualizar acessos</Button></div>
+    <div className="small-section-head"><h2>Acessos internos</h2><div className="row-actions"><StaffRegistration api={api} actorId={actorId} online={online} partners={partners} onSuccess={(email, partnerName) => { setNotice(`Acesso ${email} criado. A senha inicial deve ser comunicada por um canal seguro.${search && !`${email} ${partnerName}`.toLowerCase().includes(search.toLowerCase()) ? ' O registro não corresponde à busca atual.' : page.number > 1 ? ' O novo acesso pode estar em outra página.' : ''}`); page.reload() }} /><Button variant="outline" disabled={!online || busy} onClick={() => page.refresh()}>Atualizar acessos</Button></div></div>
     <p>Somente administradores gerenciam contas e permissões. Cada alteração exige motivo e fica registrada.</p>
     {!online && <p role="status">Conecte-se para consultar e administrar acessos.</p>}
     {(error || page.error) && <p role="alert" className="inline-error">{error || page.error}</p>}
@@ -90,7 +81,9 @@ export function StaffAccess({ api, actorId, online }: { api: Portal; actorId: st
     {online && page.data && (page.data.items.length ? <div className="staff-access-list">{page.data.items.map(account => <article key={account.id} className="staff-access-row">
       <div><b>{account.email}</b><small>{roles[account.role]}{account.isTest ? ' · Parceiro de teste' : ''}{account.partnerName ? ` · ${account.partnerName}` : ''} · {account.active ? 'Ativo' : 'Desativado'}{account.id === actorId ? ' · Seu acesso' : ''}</small>{account.lastSignInAt && <small>Último acesso: {shortDate(account.lastSignInAt)}</small>}</div>
       <div className="staff-access-actions"><Button variant="outline" disabled={busy || account.id === actorId} onClick={() => choose(account, 'edit')}>Editar acesso</Button><Button variant="outline" disabled={busy || !account.active || account.id === actorId} onClick={() => choose(account, 'password')}>Redefinir senha</Button><Button variant="ghost" disabled={busy} onClick={() => { cancel(); setAuditAccount(account) }}>Histórico de acesso</Button></div>
-    </article>)}</div> : <p>Nenhum acesso encontrado.</p>)}
+    </article>)}</div> : <EmptyState icon={KeyRound} title={search ? 'Nenhum resultado encontrado' : 'Nenhum acesso cadastrado'} description={search ? 'Confira o termo ou limpe a busca.' : 'Use Adicionar administrador para criar o primeiro acesso.'} />)}
+    {search && page.data && !page.data.items.length && <Button variant="outline" onClick={() => setQuery('')}>Limpar busca</Button>}
+    {page.error && <Button variant="outline" disabled={!online} onClick={() => page.reload()}>Tentar carregar acessos novamente</Button>}
     <PageControls label="Páginas de acessos internos" page={page} />
     {selected && <form className="counter-flow staff-access-editor" aria-label={mode === 'edit' ? 'Editar acesso interno' : 'Redefinir senha do acesso'} onSubmit={e => { e.preventDefault(); setConfirming(true) }}>
       <h3>{mode === 'edit' ? 'Editar acesso' : 'Redefinir senha'} · {selected.email}</h3>
@@ -103,13 +96,7 @@ export function StaffAccess({ api, actorId, online }: { api: Portal; actorId: st
       {confirming && <div className="staff-confirmation" role="region" aria-label="Confirmar alteração de acesso"><p>{mode === 'password' ? 'Definir a nova senha' : `${active ? 'Manter ou ativar' : 'Desativar'} o acesso como ${roles[role]}`} para <strong>{selected.email}</strong>?</p><p>As sessões anteriores perderão acesso. A alteração e o motivo serão auditados.</p><Button type="button" disabled={busy || !online} onClick={() => void commit()}>{busy ? 'Salvando…' : 'Confirmar alteração'}</Button></div>}
       <Button type="button" variant="ghost" disabled={busy} onClick={cancel}>Cancelar alteração</Button>
     </form>}
-    {auditAccount && <section className="counter-flow" aria-label="Histórico do acesso"><h3>Últimas 20 ações · {auditAccount.email}</h3>{auditError && <p role="alert">{auditError}</p>}{!audit && !auditError && <p role="status">Carregando histórico…</p>}{audit && (audit.length ? audit.map(item => <article className="staff-audit-row" key={item.id}><b>{auditNames[item.action] || 'Acesso administrado'}</b><small>{shortDate(item.createdAt)} · {item.actorEmail || 'Sistema'}</small>{item.reason && <p className="preserve-lines">{item.reason}</p>}</article>) : <p>Nenhuma alteração registrada.</p>)}</section>}
-    <form className="counter-flow staff-access-create" onSubmit={create}><h3>Criar acesso</h3>
-      <label className="field-label">E-mail do novo acesso<input className="input" name="email" type="email" required autoComplete="off" disabled={busy || !online} /></label>
-      <label className="field-label">Senha inicial<input className="input" name="password" type="password" autoComplete="new-password" minLength={12} maxLength={128} required disabled={busy || !online} /></label>
-      <label className="field-label">Perfil<select className="input" name="role" value={createRole} disabled={busy || !online} onChange={e => setCreateRole(e.target.value as StaffRole)}>{Object.entries(roles).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
-      {createRole === 'partner' && <label className="field-label">Estabelecimento (perfil parceiro)<select className="input" name="partner" required disabled={busy || !online}><option value="">Selecione</option>{partners.filter(p => p.active).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>}
-      <Button disabled={!online || busy} type="submit">Criar acesso</Button>
-    </form>
+    {auditAccount && <section className="counter-flow" aria-label="Histórico do acesso"><h3>Últimas 20 ações · {auditAccount.email}</h3>{auditError && <p role="alert">{auditError}</p>}{!audit && !auditError && <p role="status">Carregando histórico…</p>}{audit && (audit.length ? audit.map(item => <article className="staff-audit-row" key={item.id}><b>{auditNames[item.action] || 'Acesso administrado'}</b><small>{shortDate(item.createdAt)} · {item.actorEmail || 'Sistema'}</small>{item.reason && <p className="preserve-lines">{item.reason}</p>}</article>) : <EmptyState icon={History} title="Nenhuma alteração registrada" description="As próximas alterações deste acesso aparecerão aqui." />)}</section>}
+
   </section>
 }

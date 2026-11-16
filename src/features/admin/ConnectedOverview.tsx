@@ -1,3 +1,4 @@
+import { EmptyState } from '../../components/EmptyState'
 import { useEffect, useState } from 'react'
 import { ArrowRight, CircleAlert, ShoppingBag, TrendingUp, Users, Wallet } from 'lucide-react'
 import { Button } from '../../components/ui/button'
@@ -19,7 +20,7 @@ export function ConnectedOverview({ api, online, go, revision }: { api: Portal; 
     return () => { active = false }
   }, [api, online, revision])
   if (!online) return <p className="member-note" role="status">Conecte-se para consultar o resumo da operação.</p>
-  if (loading && !data) return <p role="status">Carregando resumo...</p>
+  if (loading && !data) return <section className="admin-loading" role="status" aria-label="Carregando resumo da operação"><span>Carregando resumo da operação</span><div>{[0, 1, 2, 3].map(item => <i key={item} />)}</div></section>
   if (error && !data) return <p role="alert" className="inline-error">{error}</p>
   if (!data) return null
   return <>
@@ -31,8 +32,8 @@ export function ConnectedOverview({ api, online, go, revision }: { api: Portal; 
       <div className="admin-stat alert-stat"><span className="stat-top"><span>ATENÇÃO NECESSÁRIA</span><CircleAlert size={19} /></span><strong>{data.pastDue}</strong><small>Assinatura pendente · {data.openSupport} suporte(s) aberto(s)</small></div>
     </div>
     <div className="admin-dashboard-grid">
-      <div className="surface-card"><div className="small-section-head"><h3>Últimas compras</h3><button onClick={() => go('/admin/compras')}>Ver todas <ArrowRight size={16} /></button></div>{data.recentPurchases.length ? data.recentPurchases.map(p => <div className="dash-row" key={p.id}><span className="purchase-icon"><ShoppingBag size={18} /></span><span><b>{p.memberName}</b><small>{p.partnerName} · {shortDate(p.createdAt)}</small></span><strong>{brl(p.grossCents)}</strong></div>) : <p className="empty-copy">Nenhuma compra registrada.</p>}</div>
-      <div className="surface-card attention-card"><div className="small-section-head"><h3>Precisam de atenção</h3><button onClick={() => go('/admin/cobrancas')}>Ver cobranças <ArrowRight size={16} /></button></div>{data.attentionMembers.length ? data.attentionMembers.map(m => <div className="attention-row" key={m.id}><CircleAlert size={18} /><span><b>{m.name}</b><small>Pagamento pendente{m.paidThrough ? ` · referência ${shortDate(m.paidThrough)}` : ''}</small></span></div>) : <p className="empty-copy">Nenhuma assinatura pendente.</p>}<div className="attention-note"><CircleAlert size={17} /> Verifique a situação antes de enviar uma cobrança.</div></div>
+      <div className="surface-card"><div className="small-section-head"><h3>Últimas compras</h3><button onClick={() => go('/admin/compras')}>Ver todas <ArrowRight size={16} /></button></div>{data.recentPurchases.length ? data.recentPurchases.map(p => <div className="dash-row" key={p.id}><span className="purchase-icon"><ShoppingBag size={18} /></span><span><b>{p.memberName}</b><small>{p.partnerName} · {shortDate(p.createdAt)}</small></span><strong>{brl(p.grossCents)}</strong></div>) : <EmptyState icon={ShoppingBag} title="Nenhuma compra registrada" description="As compras mais recentes aparecerão aqui." />}</div>
+      <div className="surface-card attention-card"><div className="small-section-head"><h3>Precisam de atenção</h3><button onClick={() => go('/admin/cobrancas')}>Ver cobranças <ArrowRight size={16} /></button></div>{data.attentionMembers.length ? data.attentionMembers.map(m => <div className="attention-row" key={m.id}><CircleAlert size={18} /><span><b>{m.name}</b><small>Pagamento pendente{m.paidThrough ? ` · referência ${shortDate(m.paidThrough)}` : ''}</small></span></div>) : <EmptyState icon={CircleAlert} title="Nenhuma assinatura pendente" description="Quando houver pagamentos pendentes, eles aparecerão aqui." />}<div className="attention-note"><CircleAlert size={17} /> Verifique a situação antes de enviar uma cobrança.</div></div>
     </div>
     {data.openSupport > 0 && <section className="surface-card counter-flow"><div className="small-section-head"><h3>Suporte</h3><Button variant="outline" onClick={() => go('/admin/suporte')}>Abrir suporte</Button></div><p>{data.openSupport} mensagem(ns) aguardando resposta da equipe.</p></section>}
   </>

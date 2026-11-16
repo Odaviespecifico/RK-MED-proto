@@ -1,9 +1,11 @@
-import { Button } from './ui/button'
+import { Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationNext } from './ui/pagination'
 
 export function PageControls({ label, page }: { label: string; page: { number: number; loading: boolean; canPrevious: boolean; canNext: boolean; previous: () => void; next: () => void } }) {
-  return <nav className="row-actions" aria-label={label}>
-    <Button variant="outline" disabled={page.loading || !page.canPrevious} onClick={page.previous}>Página anterior</Button>
-    <span aria-live="polite">Página {page.number}</span>
-    <Button variant="outline" disabled={page.loading || !page.canNext} onClick={page.next}>Próxima página</Button>
-  </nav>
+  return <Pagination aria-label={label} aria-busy={page.loading}>
+    <PaginationContent>
+      <PaginationItem><PaginationPrevious disabled={page.loading || !page.canPrevious} onClick={page.previous} /></PaginationItem>
+      <PaginationItem className="pagination-current"><span aria-live="polite" aria-current="page">Página {page.number}</span></PaginationItem>
+      <PaginationItem><PaginationNext disabled={page.loading || !page.canNext} onClick={page.next} /></PaginationItem>
+    </PaginationContent>
+  </Pagination>
 }

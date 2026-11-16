@@ -19,15 +19,22 @@ export const testDefaults = {
 // Standalone sandbox tools are not part of the hosted application's runtime.
 const testToolKeys = new Set(['STRIPE_TEST_ENV', 'STRIPE_TEST_ORIGIN', 'STRIPE_CLI_WEBHOOK_SECRET'])
 export const prodDefaults = Object.fromEntries(Object.keys(testDefaults).filter(key => !testToolKeys.has(key)).map(key => [key, '']))
-Object.assign(prodDefaults, { VITE_APP_MODE: 'sandbox', VITE_APP_ENV: 'production', APP_ENV: 'production',
+delete prodDefaults.STRIPE_TEST_ACCOUNT_ID
+delete prodDefaults.SMS_ALLOWED_TEST_NUMBERS
+delete prodDefaults.RESEND_ALLOWED_TEST_EMAILS
+delete prodDefaults.OPERATIONS_TEST_EMAIL
+Object.assign(prodDefaults, { STRIPE_ACCOUNT_ID: '', APP_PROJECT_REF: '', SANDBOX_SUPABASE_PROJECT_REF: '',
+  VITE_SANDBOX_SUPABASE_PROJECT_REF: '', VITE_APP_ORIGIN: '',
+  SMS_ALLOWED_NUMBERS: '', RESEND_ALLOWED_EMAILS: '', OPERATIONS_EMAIL: '', VITE_APP_MODE: 'sandbox', VITE_APP_ENV: 'production', APP_ENV: 'production',
   VITE_FACE_DETECTION_MIN_CONFIDENCE: '0.8', CLICKSEND_MODE: 'disabled', RESEND_MODE: 'disabled' })
 
 export function environmentPath(environment, root = projectRoot) {
-  if (!['test', 'prod'].includes(environment)) throw new Error('Escolha o ambiente test ou prod.')
+  if (!['test', 'stage', 'prod'].includes(environment)) throw new Error('Escolha o ambiente test, stage ou prod.')
   return resolve(root, `.env.${environment}`)
 }
 export function readEnvironment(environment, overrides = process.env, root = projectRoot) {
   const file = environmentPath(environment, root)
+  if (environment === 'stage' && !existsSync(file)) throw new Error('Configure .env.stage antes de iniciar o ambiente stage.')
   const values = existsSync(file) ? parseEnv(readFileSync(file, 'utf8')) : {}
   return { ...values, ...Object.fromEntries(Object.entries(overrides).filter(([, value]) => value !== undefined)) }
 }

@@ -4,14 +4,14 @@ import { Button } from '../../components/ui/button'
 import { Brand } from '../../components/identity'
 import type { Portal, PortalContext } from '../../integrations/portal'
 import { normalizeContact, createMemberAuth } from '../../integrations/auth'
-import { createSandboxBilling } from '../../integrations/billing'
+import { createBilling } from '../../integrations/billing'
 import { detectFace } from '../../lib/face'
 import { isAdult, onlyDigits, validCpf } from '../../lib/format'
 const Camera = lazy(() => import('../../LiveFaceCamera').then(m => ({ default: m.LiveFaceCamera })))
 export function ConnectedEnrollment({ client, api, context, refresh, go, online }: { client: SupabaseClient; api: Portal; context: PortalContext | null; refresh: () => Promise<void>; go: (path: string) => void; online: boolean }) {
   const signup = useMemo(() => createMemberAuth(client, 'signup'), [client])
   const attach = useMemo(() => createMemberAuth(client, 'attach'), [client])
-  const billing = useMemo(() => createSandboxBilling(client), [client])
+  const billing = useMemo(() => createBilling(client, import.meta.env.VITE_APP_ENV), [client])
   const [step, setStep] = useState<'email' | 'emailOtp' | 'phone' | 'phoneOtp' | 'details' | 'photo' | 'payment'>('email')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')

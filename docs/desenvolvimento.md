@@ -84,18 +84,20 @@ Verificar com `node tests/partner-maps.mjs` (dev:demo em 5173 e dev:sandbox em 5
 
 ## Suporte e acessos internos
 
+### Cadastros e rascunhos
+
+Os cadastros de parceiro e acesso interno usam etapas com revisão. O preenchimento não sensível é salvo neste navegador, separado por projeto, usuário e tipo de cadastro, por até 24 horas. Fechar ou cancelar o modal, navegar pelo sistema, sair da conta ou concluir o cadastro descarta o rascunho. Recarregar a página ou fechar o navegador permite retomá-lo. Senhas e arquivos não são salvos no rascunho; é necessário informá-los novamente. Se o armazenamento estiver indisponível, o cadastro continua funcionando sem recuperação automática.
+
+As sessões Supabase e os verificadores PKCE usam IndexedDB, com migração dos valores antigos do localStorage. Se o IndexedDB estiver indisponível, a autenticação funciona apenas em memória e a sessão pode não sobreviver à recarga. O armazenamento do navegador não protege dados de quem controla um dispositivo desbloqueado ou executa código na mesma origem.
+
+Para verificar os novos fluxos, execute `node tests/connected/registration-wizards.mjs` e `node tests/connected/registration-recovery.mjs` com o servidor de fixtures em 5192; `node tests/connected/registration-wizards-live.mjs` exige Supabase e funções locais e o sandbox em 5174. `node tests/connected/session-storage.mjs` verifica a saída entre abas. Os testes conectados criam dados sintéticos apenas no ambiente local.
+
 Em **Conta → Meus atendimentos**, o associado consulta mensagens/respostas e encerra solicitações. Em **Admin → Suporte**, admin/suporte respondem e acompanham a fila: aguardando, falha ou aceito pelo provedor. Reenvio manual só está disponível em falhas; o worker agendado processa a fila automaticamente. Encerramento preserva resposta e histórico; não cancela uma resposta já enfileirada. Suporte não depende da Stripe para enviar e-mail.
 
 Em **Admin → Equipe → Acessos internos**, admin busca contas, altera perfil/estabelecimento/situação, redefine senha e consulta auditoria. Senha inicial e nova senha têm 12–128 caracteres e são comunicadas ao responsável por canal seguro; o sistema não envia senhas por e-mail. A própria conta exige outro administrador para alterações. Desativação/alteração/redefinição bloqueiam as sessões anteriores nas RPCs da aplicação. A reativação exige novo login. Contas de associados não aparecem nessa gestão.
 
 Verificação local adicional: `node --experimental-strip-types tests/connected/staff-access.mjs` usa Auth/RPC reais e remove sua identidade sintética; `node tests/connected/support-staff-ui.mjs` exige `dev:sandbox`, testa a 360px e remove seu atendimento/fila sintéticos. Ambos aceitam somente Docker local. Testes de transporte injetam o provedor e não enviam mensagens reais.
 
-## Criar parceiro de teste na homologação
+## Cadastros antigos de teste
 
-Entre como administrador e abra **Parceiros → Criar parceiro de teste**. Preencha estabelecimento, desconto, e-mail/senha e primeiro funcionário/código. Revise e confirme. Guarde a senha e o código do funcionário: o resultado mostra somente o e-mail e o código do estabelecimento. Entre por **Acesso da equipe** com e-mail/senha; no balcão, informe os códigos do estabelecimento e do funcionário.
-
-O parceiro fica ativo e marcado como teste na gestão; não aparece na landing, no diretório ou nos mapas dos associados. Sua conta aparece em **Equipe → Acessos internos**, onde pode ser desativada ou ter a senha redefinida. Cadastro e compras continuam no banco real de homologação, sujeitos às regras normais de elegibilidade; não se cria associado pago nem se habilita cobrança live.
-
-Se houver interrupção, use **Verificar e concluir cadastro**. Após recarregar a página, o mesmo administrador pode preencher novamente os mesmos dados, e-mail e código de funcionário para retomar a reserva. Uma conta Auth já criada é reutilizada; a senha informada na primeira criação permanece, podendo ser redefinida em Equipe após concluir. Contas pendentes não conseguem operar nem virar associados. Credenciais ficam somente na memória da tela e no Auth/hash do código, nunca no armazenamento persistente do navegador ou auditoria.
-
-Testes adicionais: `node --experimental-strip-types tests/connected/test-partner.mjs` valida recuperação/concorrência com Auth/Postgres locais. `node tests/connected/test-partner-ui.mjs` exige `dev:sandbox` e `functions:serve`, executa o fluxo completo a 360px e remove sua conta/estabelecimento sintéticos locais. Os helpers recusam destinos diferentes do Docker local.
+O cadastro especial de parceiro de teste foi removido da interface e da ação da API. Parceiros e contas criados anteriormente não são apagados nem convertidos automaticamente; a identificação e o ocultamento dos associados permanecem para preservar o comportamento desses registros. O histórico de migrations é mantido.

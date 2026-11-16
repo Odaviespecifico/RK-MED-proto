@@ -18,7 +18,7 @@ Na configuração **remota** do Supabase Auth, `Site URL` deve ser `https://rk-m
 ## Preparar o lançamento comercial
 
 - Aprovar termos/privacidade/foto, cancelamento, retenção/exclusão, suporte e conteúdo real. Documentos atuais de teste não podem ser aceitos em produção.
-- Preparar backend de produção separado e implementar sua configuração explícita no código. Frontend/Edge/transporte atuais recusam produção; não remover guardas para reaproveitar credenciais de teste.
+- Preparar backend de produção separado e configurar o suporte implementado localmente em 15/11/2026. As guardas exigem origem/projetos/banco/modos compatíveis; não reutilizar credenciais de teste.
 - Revisar capacidade, acesso operacional, monitoramento, rate limits e alertas. Ensaiar restauração de banco **e objetos Storage** com responsáveis e objetivos de recuperação.
 - Aplicar migrations revisadas e publicar funções compatíveis, sem seed/reset. Segredos live, IDs/preços/webhook/portal e domínio devem pertencer ao ambiente correto. Previews apontam para homologação.
 - Configurar somente URL/referência/chave publicável no frontend. Conferir bundle sem segredos/mocks e excluir dados sintéticos antes de abrir cadastro comercial.
@@ -26,7 +26,7 @@ Na configuração **remota** do Supabase Auth, `Site URL` deve ser `https://rk-m
 
 ## Publicação atual
 
-A Vercel usa `npm ci`, `npm run build:hosted`, saída `dist` e raiz do repositório. O target estável chamado `production` pela Vercel continua executando o sandbox RKMED. `build:prod` segue reservado/bloqueado.
+A Vercel usa `npm ci`, `node scripts/deploy/build.mjs`, saída `dist` e raiz do repositório. Por padrão, o seletor mantém `build:hosted`; o projeto comercial separado exige `RKMED_DEPLOY_ENV=production` no target Production para executar `build:prod`. O target estável chamado `production` pela Vercel continua executando o sandbox RKMED. `build:prod` exige as variáveis comerciais descritas em [ambientes](ambientes.md), e não libera tráfego por si só.
 
 O Supabase de homologação tem 21 migrations aplicadas, suite RKMED de Edge Functions, bucket privado e worker agendado. A recuperação de senha usa a função `phone-code` e a migration `20261109203819_password_recovery_all_roles`; ela é limitada por endereço, envia por Resend e mantém resposta pública genérica. O endpoint e o banco foram publicados; a jornada completa de e-mail ainda precisa de aceite registrado. O script [schedule-jobs.sql](../scripts/deploy/schedule-jobs.sql) depende de `rkmed_jobs_secret` no Vault e preserva o cron legado. Não gravar bearer no comando cron ou em arquivos versionados.
 

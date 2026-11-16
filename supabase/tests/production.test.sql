@@ -1,0 +1,18 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set local search_path=public,extensions;
+select no_plan();
+select ok(not has_function_privilege('anon','public.rk_backend_environment()','execute'),'Anonymous cannot attest backend environment');
+select ok(not has_function_privilege('authenticated','public.rk_backend_environment()','execute'),'Browsers cannot attest backend environment');
+select ok(has_function_privilege('service_role','public.rk_backend_environment()','execute'),'Backend can attest environment');
+update private.settings set value='production' where key='environment';
+select set_config('request.jwt.claims','{"role":"service_role"}',true);
+set local role service_role;
+select is(public.rk_backend_environment(),'production','Backend receives actual database mode');
+select is((public.rk_backend_member('00000000-0000-4000-8000-000000000001')->>'consented')::boolean,false,'Mock consents cannot enable live Checkout');
+reset role;
+set local role anon;
+select is((select count(*) from jsonb_array_elements(public.rk_documents()) d where (d->>'testOnly')::boolean),0::bigint,'Production public documents exclude legal mocks');
+reset role;
+select * from finish();
+rollback;

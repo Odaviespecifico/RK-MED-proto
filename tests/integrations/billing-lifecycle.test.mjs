@@ -35,7 +35,7 @@ test('RF-PAG: Checkout payment reconciles to the persisted member Customer only 
         sessionCustomer = params.customer
         return { id: 'cs_test_member', url: 'https://checkout.stripe.com/test', livemode: false }
       },
-      retrieve: async () => ({ customer: sessionCustomer }),
+      retrieve: async () => ({ customer: sessionCustomer, livemode: false }),
     } },
     subscriptions: { list: async ({ customer }) => ({ has_more: false, data: paid && customer === sessionCustomer ? [{ ...subscription, latest_invoice: 'in_test', created: 1 }] : [] }) },
     invoices: { retrieve: async () => ({ ...invoice, customer: sessionCustomer }) },

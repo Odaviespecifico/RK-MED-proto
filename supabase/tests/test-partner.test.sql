@@ -2,6 +2,11 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path=public,extensions;
 select no_plan();
+select ok(private.valid_partner_cnpj('11222333000181'),'Valid CNPJ check digits are at positions 13 and 14');
+select ok(private.valid_partner_cnpj('11.222.333/0001-81'),'Formatted CNPJ is normalized');
+select ok(not private.valid_partner_cnpj('11222333000182'),'Invalid CNPJ verifier rejected');
+select ok(not private.valid_partner_cnpj('11111111111111'),'Repeated CNPJ rejected');
+select ok(not private.valid_partner_cnpj('112223330001811'),'Excess CNPJ digits rejected');
 insert into auth.sessions(id,user_id,created_at,updated_at,aal) values
 ('95000000-0000-4000-8000-000000000005','00000000-0000-4000-8000-000000000005',now(),now(),'aal1'),
 ('95000000-0000-4000-8000-000000000006','00000000-0000-4000-8000-000000000006',now(),now(),'aal1');
@@ -11,17 +16,17 @@ select ok(not has_function_privilege('authenticated','public.rk_backend_test_par
 select ok(not has_function_privilege('anon','public.rk_backend_test_partner_finish(uuid,uuid,uuid,uuid)','execute'),'Anonymous cannot finalize partner');
 select set_config('request.jwt.claims','{"role":"service_role"}',true);
 set local role service_role;
-select throws_ok($q$select public.rk_backend_test_partner_begin('00000000-0000-4000-8000-000000000006','95000000-0000-4000-8000-000000000006','96000000-0000-4000-8000-000000000001','96000000-0000-4000-8000-000000000002','sql-test-partner@rkmed.test','{"name":"Teste SQL","segment":"Academia","address":"Rua teste","employeeName":"Funcionário","discountBps":2000}','2468')$q$,'42501','Acesso negado','Support cannot provision partner via service guard');
+select throws_ok($q$select public.rk_backend_test_partner_begin('00000000-0000-4000-8000-000000000006','95000000-0000-4000-8000-000000000006','96000000-0000-4000-8000-000000000001','96000000-0000-4000-8000-000000000002','sql-test-partner@rkmed.test','{"name":"Teste SQL","segment":"Academia","street":"Rua teste","neighborhood":"Centro","city":"Recife","state":"PE","postalCode":"50000000","description":"Parceiro sintético","cnpj":"11222333000181","employeeName":"Funcionário","discountBps":2000}','2468')$q$,'42501','Acesso negado','Support cannot provision partner via service guard');
 reset role;
 update private.settings set value='production' where key='environment';
 set local role service_role;
-select throws_ok($q$select public.rk_backend_test_partner_begin('00000000-0000-4000-8000-000000000005','95000000-0000-4000-8000-000000000005','96000000-0000-4000-8000-000000000001','96000000-0000-4000-8000-000000000002','sql-test-partner@rkmed.test','{"name":"Teste SQL","segment":"Academia","address":"Rua teste","employeeName":"Funcionário","discountBps":2000}','2468')$q$,'42501','Cadastro de teste indisponível neste ambiente.','Production guard denies even administrators');
+select throws_ok($q$select public.rk_backend_test_partner_begin('00000000-0000-4000-8000-000000000005','95000000-0000-4000-8000-000000000005','96000000-0000-4000-8000-000000000001','96000000-0000-4000-8000-000000000002','sql-test-partner@rkmed.test','{"name":"Teste SQL","segment":"Academia","street":"Rua teste","neighborhood":"Centro","city":"Recife","state":"PE","postalCode":"50000000","description":"Parceiro sintético","cnpj":"11222333000181","employeeName":"Funcionário","discountBps":2000}','2468')$q$,'42501','Cadastro de teste indisponível neste ambiente.','Production guard denies even administrators');
 reset role;
 update private.settings set value='local' where key='environment';
 set local role service_role;
-select set_config('rkmed.test.reservation',public.rk_backend_test_partner_begin('00000000-0000-4000-8000-000000000005','95000000-0000-4000-8000-000000000005','96000000-0000-4000-8000-000000000001','96000000-0000-4000-8000-000000000002','sql-test-partner@rkmed.test','{"name":"Teste SQL","segment":"Academia","address":"Rua teste","employeeName":"Funcionário","discountBps":2000}','2468')::text,true);
+select set_config('rkmed.test.reservation',public.rk_backend_test_partner_begin('00000000-0000-4000-8000-000000000005','95000000-0000-4000-8000-000000000005','96000000-0000-4000-8000-000000000001','96000000-0000-4000-8000-000000000002','sql-test-partner@rkmed.test','{"name":"Teste SQL","segment":"Academia","street":"Rua teste","neighborhood":"Centro","city":"Recife","state":"PE","postalCode":"50000000","description":"Parceiro sintético","cnpj":"11222333000181","employeeName":"Funcionário","discountBps":2000}','2468')::text,true);
 select is(current_setting('rkmed.test.reservation')::jsonb->>'status','pending','Reservation precedes Auth');
-select is(public.rk_backend_test_partner_begin('00000000-0000-4000-8000-000000000005','95000000-0000-4000-8000-000000000005','96000000-0000-4000-8000-000000000001','96000000-0000-4000-8000-000000000003','sql-test-partner@rkmed.test','{"name":"Teste SQL","segment":"Academia","address":"Rua teste","employeeName":"Funcionário","discountBps":2000}','2468')->>'status','busy','Concurrent operation cannot own active lease');
+select is(public.rk_backend_test_partner_begin('00000000-0000-4000-8000-000000000005','95000000-0000-4000-8000-000000000005','96000000-0000-4000-8000-000000000001','96000000-0000-4000-8000-000000000003','sql-test-partner@rkmed.test','{"name":"Teste SQL","segment":"Academia","street":"Rua teste","neighborhood":"Centro","city":"Recife","state":"PE","postalCode":"50000000","description":"Parceiro sintético","cnpj":"11222333000181","employeeName":"Funcionário","discountBps":2000}','2468')->>'status','busy','Concurrent operation cannot own active lease');
 select throws_ok($q$select public.rk_backend_test_partner_finish('00000000-0000-4000-8000-000000000005','95000000-0000-4000-8000-000000000005','96000000-0000-4000-8000-000000000001','96000000-0000-4000-8000-000000000002')$q$,'P0001','Não foi possível vincular a conta. Retome o cadastro.','Finalization requires exact verified Auth identity');
 reset role;
 insert into auth.users(id,email,email_confirmed_at,raw_app_meta_data) values((current_setting('rkmed.test.reservation')::jsonb->>'authUserId')::uuid,'sql-test-partner@rkmed.test',now(),'{"rkmed_test_partner_operation":"96000000-0000-4000-8000-000000000001"}');

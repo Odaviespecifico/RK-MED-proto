@@ -1,3 +1,4 @@
+import { stripeLiveMode, stripeAccountId } from './providers/stripe.ts'
 import type Stripe from 'stripe'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { trustedRpc } from './backend-rpc.ts'
@@ -10,24 +11,25 @@ const id = (value: string | { id: string } | null | undefined) => typeof value =
 // Called only for verified invoice.paid events or durable pending ledger entries.
 // Refunds, disputes and chargebacks deliberately never reverse these transfers (D27).
 export async function sendWedeaShare(db: SupabaseClient, stripe: Stripe, env: Record<string, string | undefined>, invoiceId: string) {
+  const live = stripeLiveMode(env)
   const share = await trustedRpc<Share | null>(db, 'rk_wedea_get', { p_invoice: invoiceId })
   if (!share || share.status === 'sent' || share.status === 'skipped') return
   if (share.status === 'review') throw new PublicError('Repasse Wedea exige conciliação operacional.')
   const destination = share.destination || env.STRIPE_WEDEA_ACCOUNT_ID
-  if (!destination || !/^acct_[A-Za-z0-9]+$/.test(destination) || destination === env.STRIPE_TEST_ACCOUNT_ID) {
-    throw new PublicError('Configure a conta conectada Wedea no sandbox.')
+  if (!destination || !/^acct_[A-Za-z0-9]+$/.test(destination) || destination === stripeAccountId(env)) {
+    throw new PublicError('Configure a conta conectada Wedea no ambiente configurado.')
   }
   const account = await stripe.v2.core.accounts.retrieve(destination, { include: ['configuration.recipient', 'defaults'] })
-  if (account.livemode || account.configuration?.recipient?.capabilities?.stripe_balance?.stripe_transfers?.status !== 'active'
+  if (account.livemode !== live || account.configuration?.recipient?.capabilities?.stripe_balance?.stripe_transfers?.status !== 'active'
     || account.defaults?.responsibilities?.fees_collector !== 'application'
-    || account.defaults?.responsibilities?.losses_collector !== 'application') throw new PublicError('Conta Wedea indisponível para repasses no sandbox.')
+    || account.defaults?.responsibilities?.losses_collector !== 'application') throw new PublicError('Conta Wedea indisponível para repasses no ambiente configurado.')
 
   let chargeId = share.charge_id
   let useSource = share.use_source
   if (!chargeId) {
     const payments = await stripe.invoicePayments.list({ invoice: invoiceId, status: 'paid', limit: 100 })
     const payment = payments.data[0]
-    if (payments.has_more || payments.data.length !== 1 || payment.livemode || payment.currency !== 'brl'
+    if (payments.has_more || payments.data.length !== 1 || payment.livemode !== live || payment.currency !== 'brl'
       || id(payment.invoice) !== invoiceId || !payment.amount_paid || payment.amount_paid <= 0) {
       throw new PublicError('Pagamento da mensalidade exige revisão antes do repasse.')
     }
@@ -36,14 +38,14 @@ export async function sendWedeaShare(db: SupabaseClient, stripe: Stripe, env: Re
       const intentId = id(payment.payment.payment_intent)
       if (!intentId) throw new PublicError('Pagamento ainda não confirmado.')
       const intent = await stripe.paymentIntents.retrieve(intentId)
-      if (intent.livemode || intent.status !== 'succeeded' || intent.currency !== 'brl' || id(intent.customer) !== share.customer_id) {
+      if (intent.livemode !== live || intent.status !== 'succeeded' || intent.currency !== 'brl' || id(intent.customer) !== share.customer_id) {
         throw new PublicError('Pagamento incompatível com o associado.')
       }
       chargeId = id(intent.latest_charge) || null
     }
     if (!chargeId) throw new PublicError('Pagamento sem cobrança Stripe confirmada para repasse.')
     const charge = await stripe.charges.retrieve(chargeId)
-    if (charge.livemode || !charge.paid || charge.status !== 'succeeded' || charge.currency !== 'brl'
+    if (charge.livemode !== live || !charge.paid || charge.status !== 'succeeded' || charge.currency !== 'brl'
       || id(charge.customer) !== share.customer_id || charge.transfer || charge.transfer_data || charge.application_fee) {
       throw new PublicError('Cobrança incompatível com o repasse Wedea.')
     }
@@ -60,7 +62,7 @@ export async function sendWedeaShare(db: SupabaseClient, stripe: Stripe, env: Re
     destination: claimed.destination!, ...(claimed.use_source ? { source_transaction: claimed.charge_id! } : {}),
     transfer_group: `rkmed:wedea:${invoiceId}`, metadata: { invoice_id: invoiceId, policy: 'wedea-v1' },
   }, { idempotencyKey: `rkmed:wedea:v1:${invoiceId}` })
-  if (transfer.livemode || transfer.amount !== claimed.amount_cents || transfer.currency !== 'brl'
-    || id(transfer.destination) !== claimed.destination) throw new PublicError('Resposta de repasse incompatível com o sandbox.')
+  if (transfer.livemode !== live || transfer.amount !== claimed.amount_cents || transfer.currency !== 'brl'
+    || id(transfer.destination) !== claimed.destination) throw new PublicError('Resposta de repasse incompatível com o ambiente.')
   await trustedRpc(db, 'rk_wedea_complete', { p_invoice: invoiceId, p_owner: owner, p_transfer: transfer.id })
 }

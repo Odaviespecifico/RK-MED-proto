@@ -1,0 +1,28 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set local search_path=public,extensions;
+select no_plan();
+insert into auth.sessions(id,user_id,created_at,updated_at,aal)
+select ('97000000-0000-4000-8000-'||lpad(i::text,12,'0'))::uuid,('00000000-0000-4000-8000-'||lpad(i::text,12,'0'))::uuid,now(),now(),'aal1' from generate_series(1,7) i;
+select ok(not has_function_privilege('anon','public.rk_create_partner_employee(uuid,text)','execute'),'Anonymous cannot create employees');
+select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000007","role":"authenticated","session_id":"97000000-0000-4000-8000-000000000007"}',true);
+set local role authenticated;
+select throws_ok($q$select public.rk_create_partner_employee('10000000-0000-4000-8000-000000000001','Teste')$q$,'42501','Acesso negado','Viewer cannot create employees');
+select throws_ok($q$select public.rk_partner_employees('10000000-0000-4000-8000-000000000001')$q$,'42501','Acesso negado','Viewer cannot list employee identities');
+reset role;
+select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000005","role":"authenticated","session_id":"97000000-0000-4000-8000-000000000005"}',true);
+set local role authenticated;
+select set_config('rkmed.test.employee',public.rk_create_partner_employee('10000000-0000-4000-8000-000000000001','Funcionário automático')::text,true);
+select is(length(current_setting('rkmed.test.employee')::jsonb->>'code'),4,'Exactly four digits returned');
+select ok((current_setting('rkmed.test.employee')::jsonb->>'code')~'^[0-9]{4}$','Code contains four decimal digits');
+select ok(not exists(select 1 from jsonb_array_elements(public.rk_partner_employees('10000000-0000-4000-8000-000000000002')) e where e->>'id'=current_setting('rkmed.test.employee')::jsonb->>'id'),'Other partner excludes employee');
+select throws_ok($q$select public.rk_save_employee('10000000-0000-4000-8000-000000000002','Movido','',(current_setting('rkmed.test.employee')::jsonb->>'id')::uuid)$q$,'P0001','Funcionário não encontrado neste parceiro','Cannot move employee to another partner');
+select public.rk_save_employee('10000000-0000-4000-8000-000000000001','Funcionário automático','',(current_setting('rkmed.test.employee')::jsonb->>'id')::uuid,false);
+select isnt(public.rk_create_partner_employee('10000000-0000-4000-8000-000000000001','Após inativação')->>'code',current_setting('rkmed.test.employee')::jsonb->>'code','Inactive employee code remains reserved');
+select public.rk_create_partner_employee('10000000-0000-4000-8000-000000000001','Geração '||i) from generate_series(1,8) i;
+select ok(not exists(select 1 from jsonb_array_elements(public.rk_partner_purchases_page('10000000-0000-4000-8000-000000000001')->'items') p where p->>'partnerId'<>'10000000-0000-4000-8000-000000000001'),'Usage is scoped by server to selected partner');
+reset role;
+select ok((select code_hash=extensions.crypt(current_setting('rkmed.test.employee')::jsonb->>'code',code_hash) from private.employees where id=(current_setting('rkmed.test.employee')::jsonb->>'id')::uuid),'Generated code matches stored hash');
+select ok(not exists(select 1 from private.employees a join private.employees b on a.id<>b.id and a.partner_id=b.partner_id where a.partner_id='10000000-0000-4000-8000-000000000001' and a.code_hash=extensions.crypt(current_setting('rkmed.test.employee')::jsonb->>'code',a.code_hash) and b.code_hash=extensions.crypt(current_setting('rkmed.test.employee')::jsonb->>'code',b.code_hash)),'Generated code is not duplicated in partner');
+select * from finish();
+rollback;

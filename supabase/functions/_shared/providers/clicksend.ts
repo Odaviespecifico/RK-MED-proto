@@ -1,3 +1,4 @@
+import { deliveryAllowed } from '../environment.ts'
 import { PublicError } from '../http.ts'
 
 type Environment = Record<string, string | undefined>
@@ -6,9 +7,9 @@ type Environment = Record<string, string | undefined>
 export function createClickSend(env: Environment, transport: typeof fetch = fetch) {
   return {
     async sendCode(to: string, code: string, reference: string): Promise<{ messageId: string }> {
-      const allowed = (env.SMS_ALLOWED_TEST_NUMBERS || '').split(',').map(value => value.trim())
-      if (!['local', 'sandbox'].includes(env.APP_ENV || '') || env.CLICKSEND_MODE !== 'test'
-        || !env.CLICKSEND_USERNAME || !env.CLICKSEND_API_KEY || (!allowed.includes('*') && !allowed.includes(to))) {
+      const production = env.APP_ENV === 'production'
+      if (!['local', 'sandbox', 'production'].includes(env.APP_ENV || '') || env.CLICKSEND_MODE !== (production ? 'production' : 'test')
+        || !env.CLICKSEND_USERNAME || !env.CLICKSEND_API_KEY || !deliveryAllowed(env, 'sms', to)) {
         throw new PublicError('Envio SMS não configurado ou destinatário não autorizado.')
       }
       if (!/^\+55\d{10,11}$/.test(to) || !/^\d{6}$/.test(code) || !/^[a-f0-9-]{36}$/.test(reference)) {

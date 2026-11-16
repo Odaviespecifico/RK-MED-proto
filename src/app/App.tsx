@@ -12,6 +12,7 @@ const SandboxApp = lazy(() => import('./SandboxApp'))
 export default function App() {
   try {
     const config = readPublicConfig(import.meta.env)
+    if (config.environment === 'production' && window.location.origin !== import.meta.env.VITE_APP_ORIGIN) throw new Error('Origem comercial inválida.')
     return <PwaInstallProvider><AppUpdate /><Suspense fallback={<div role="status" className="gate-page">Carregando RKMED…</div>}>
       {config.mode === 'demo' && DemoApp ? <DemoApp /> : <SandboxApp config={config} />}
     </Suspense></PwaInstallProvider>

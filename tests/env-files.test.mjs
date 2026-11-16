@@ -21,12 +21,15 @@ test('environment initialization preserves configured files and keeps production
   assert.equal(statSync(join(root, '.env.test')).mode & 0o777, 0o600)
   assert.equal(statSync(join(root, '.env.prod')).mode & 0o777, 0o600)
 }))
-test('test and prod read exactly their own file, ignoring legacy automatic dotenv files', () => isolated(root => {
+test('test, stage and prod read exactly their own file, ignoring legacy automatic dotenv files', () => isolated(root => {
   writeFileSync(join(root, '.env.test'), 'APP_ENV=local\nPRIVATE_KEY=test-only\n')
   writeFileSync(join(root, '.env.prod'), 'APP_ENV=production\nPRIVATE_KEY=prod-only\n')
+  assert.throws(() => readEnvironment('stage', {}, root), /Configure .env.stage/)
+  writeFileSync(join(root, '.env.stage'), 'APP_ENV=sandbox\nPRIVATE_KEY=stage-only\n')
   writeFileSync(join(root, '.env.local'), 'LEGACY_KEY=must-not-load\n')
   assert.deepEqual(readEnvironment('test', {}, root), { APP_ENV: 'local', PRIVATE_KEY: 'test-only' })
   assert.deepEqual(readEnvironment('prod', {}, root), { APP_ENV: 'production', PRIVATE_KEY: 'prod-only' })
+  assert.deepEqual(readEnvironment('stage', {}, root), { APP_ENV: 'sandbox', PRIVATE_KEY: 'stage-only' })
   assert.throws(() => environmentPath('staging', root))
 }))
 test('secret-store variables override files without importing undefined values', () => isolated(root => {

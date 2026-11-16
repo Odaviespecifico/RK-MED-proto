@@ -1,15 +1,16 @@
+import { stripeLiveMode } from './providers/stripe.ts'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type Stripe from 'stripe'
 import { trustedRpc } from './backend-rpc.ts'
 import type { BackendMember, Environment } from './billing.ts'
-import { createResendSandbox } from './providers/resend.ts'
+import { createResend } from './providers/resend.ts'
 
 export type QueuedNotification = { id: string; memberId: string; key: string; kind: string; reference: string | null }
 type Send = (to: string, subject: string, text: string, operation: string) => Promise<{ messageId: string }>
 
 // Delivery is independent of billing availability. Claimed immutable replies retain
 // the same provider idempotency key on every automatic/manual retry.
-export async function deliverNotifications(db: SupabaseClient, env: Environment, messages: QueuedNotification[], getStripe: () => Promise<Stripe>, send: Send = createResendSandbox(env).send) {
+export async function deliverNotifications(db: SupabaseClient, env: Environment, messages: QueuedNotification[], getStripe: () => Promise<Stripe>, send: Send = createResend(env).send) {
   let failures = 0
   for (const item of messages.slice(0, 100)) {
     const owner = crypto.randomUUID()
@@ -32,15 +33,15 @@ export async function deliverNotifications(db: SupabaseClient, env: Environment,
         to = info.email; subject = 'RKMED — sua assinatura'
         text = `A situação da sua assinatura RKMED foi atualizada. Acesse ${env.APP_ORIGIN}/app/cobranca para consultar pagamento e benefícios.`
         if (item.kind.startsWith('risk.')) {
-          to = env.OPERATIONS_TEST_EMAIL || ''; subject = 'RKMED — revisão operacional'
-          text = `Revisão operacional necessária para o cadastro ${info.id}. Consulte a fila interna do ambiente de testes.`
+          to = (stripeLiveMode(env) ? env.OPERATIONS_EMAIL : env.OPERATIONS_TEST_EMAIL) || ''; subject = 'RKMED — revisão operacional'
+          text = `Revisão operacional necessária para o cadastro ${info.id}. Consulte a fila interna.`
         }
         if (item.kind === 'collection.link') {
           if (!item.reference) throw new Error('Missing invoice')
           const stripe = await getStripe()
           const invoice = await stripe.invoices.retrieve(item.reference)
           const customer = typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id
-          if (customer !== info.customerId || invoice.livemode) throw new Error('Invoice scope')
+          if (customer !== info.customerId || invoice.livemode !== stripeLiveMode(env)) throw new Error('Invoice scope')
           if (invoice.status === 'paid' || invoice.status === 'void') success = true
           else {
             if (!invoice.hosted_invoice_url || invoice.status !== 'open') throw new Error('Invoice unavailable')

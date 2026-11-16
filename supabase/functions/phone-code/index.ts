@@ -1,23 +1,26 @@
+import { runtimeEnvironment, assertDatabaseEnvironment, deliveryAllowed } from '../_shared/environment.ts'
 import { startMemberSession } from '../_shared/session-bridge.ts'
 import { requestPasswordRecovery } from '../_shared/password-recovery.ts'
 import { createClient } from '@supabase/supabase-js'
 import { trustedRpc } from '../_shared/backend-rpc.ts'
-import { boundedBody, PublicError, response } from '../_shared/http.ts'
+import { allowedRequestOrigin, boundedBody, PublicError, response } from '../_shared/http.ts'
 import { createOtpService } from '../_shared/otp-service.ts'
 import type { OtpIdentity, OtpPurpose, OtpChannel } from '../_shared/otp-service.ts'
 import { createClickSend } from '../_shared/providers/clicksend.ts'
-import { createResendSandbox } from '../_shared/providers/resend.ts'
+import { createResend } from '../_shared/providers/resend.ts'
 const env = Deno.env.toObject()
 Deno.serve(async request => {
-  const origin = env.APP_ORIGIN
-  if (!origin || request.headers.get('origin') !== origin) return response({ error: 'Origem não permitida.' }, 403)
+  const origin = allowedRequestOrigin(request, env)
+  if (!origin) return response({ error: 'Origem não permitida.' }, 403)
   if (request.method === 'OPTIONS') return response({}, 200, origin)
-  if (request.method !== 'POST' || !['local','sandbox'].includes(env.APP_ENV || '')) return response({ error: 'Operação indisponível.' }, 405, origin)
+  if (request.method !== 'POST' || !['local','sandbox','production'].includes(env.APP_ENV || '')) return response({ error: 'Operação indisponível.' }, 405, origin)
   try {
+    runtimeEnvironment(env)
     if (!env.OTP_HMAC_SECRET || env.OTP_HMAC_SECRET.length < 32) return response({ error: 'Verificação não configurada.' }, 503, origin)
     const body = JSON.parse(await boundedBody(request, 2048))
     if (body.action === 'recover') {
       const db = createClient(env.SUPABASE_URL!, env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } })
+      await assertDatabaseEnvironment(db, env)
       return response(await requestPasswordRecovery(db, env, body.email), 200, origin)
     }
     if (!['request','verify'].includes(body.action) || !['email','sms'].includes(body.channel) || !['login','signup','attach'].includes(body.purpose)) throw new PublicError('Solicitação inválida.')
@@ -25,9 +28,9 @@ Deno.serve(async request => {
     const purpose = body.purpose as OtpPurpose
     const contact = typeof body.contact === 'string' ? (channel === 'email' ? body.contact.trim().toLowerCase() : body.contact) : ''
     // Check delivery configuration before allocating a challenge; never leak secrets/provider errors.
-    const allowed = ((channel === 'sms' ? env.SMS_ALLOWED_TEST_NUMBERS : env.RESEND_ALLOWED_TEST_EMAILS) || '').split(',').map(v => v.trim().toLowerCase())
-    if (!allowed.includes('*') && !allowed.includes(contact.toLowerCase())) throw new PublicError('Contato não autorizado no ambiente de testes.')
+    if (!deliveryAllowed(env, channel, contact)) throw new PublicError('Contato não autorizado neste ambiente.')
     const db = createClient(env.SUPABASE_URL!, env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } })
+    await assertDatabaseEnvironment(db, env)
     let actorId: string | null = null
     if (purpose === 'attach') {
       const token = (request.headers.get('authorization') || '').replace(/^Bearer /, '')
@@ -45,7 +48,7 @@ Deno.serve(async request => {
       consume: args => trustedRpc(db,'rk_otp_consume',{p_id:args.id,p_contact_hash:args.contactHash,p_channel:args.channel,p_purpose:args.purpose,p_actor:args.actorId,p_code_hash:args.codeHash}),
       send: async (type,to,code,id) => {
         if (type === 'sms') return (await createClickSend(env).sendCode(to,code,id)).messageId
-        await createResendSandbox(env).send(to,'Seu código RKMED',`Seu código RKMED é ${code}. Válido por 5 minutos. Não compartilhe.`,id,code)
+        await createResend(env).send(to,'Seu código RKMED',`Seu código RKMED é ${code}. Válido por 5 minutos. Não compartilhe.`,id,code)
         return id
       },
       complete: async args => {

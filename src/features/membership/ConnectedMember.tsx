@@ -5,7 +5,7 @@ import type { FormEvent } from 'react'
 import QRCode from 'qrcode'
 import { ArrowRight, HelpCircle } from 'lucide-react'
 import { readMemberSnapshot, saveMemberSnapshot, type MemberSnapshot } from '../../offline/member'
-import { Brand } from '../../components/identity'
+import { Brand, PartnerLogo } from '../../components/identity'
 import { Button } from '../../components/ui/button'
 import type { MemberEconomy, Portal, PortalMember } from '../../integrations/portal'
 import type { PublicPartner } from '../../integrations/contracts'
@@ -123,7 +123,7 @@ export function ConnectedMember({ api, member, partners, online, refresh, snapsh
     </>}
     {section === 'parceiros' && <>
       <div className="welcome-row"><div><h1>Parceiros</h1><p>Consulte a rede credenciada, os descontos e os endereços.</p></div></div>
-      <section className="surface-card counter-flow"><div className="small-section-head"><h2>Rede credenciada</h2><small>{partners.length} parceiro(s)</small></div>{partners.length ? partners.map(p => <article className="partner-directory-entry" key={p.id}><div className="dash-row"><span><b>{p.name}</b><small>{p.segment} · {p.address}</small></span><strong>{p.discount}%</strong></div><PartnerLocation partner={p} /></article>) : <p className="empty-copy">Nenhum parceiro disponível.</p>}</section>
+      <section className="surface-card counter-flow"><div className="small-section-head"><h2>Rede credenciada</h2><small>{partners.length} parceiro(s)</small></div>{partners.length ? partners.map(p => <article className="partner-directory-entry" key={p.id}><div className="dash-row"><span><PartnerLogo partner={p} /><b>{p.name}</b><small>{p.segment} · {p.address}</small>{p.description && <small>{p.description}</small>}</span><strong>{p.discount}%</strong></div><PartnerLocation partner={p} /></article>) : <p className="empty-copy">Nenhum parceiro disponível.</p>}</section>
       <PartnerMap partners={partners} />
     </>}
     {section === 'economia' && <>

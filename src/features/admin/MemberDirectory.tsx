@@ -1,3 +1,5 @@
+import { Users } from 'lucide-react'
+import { EmptyState } from '../../components/EmptyState'
 import { useCallback, useState } from 'react'
 import type { AdminMember, Portal } from '../../integrations/portal'
 import type { PageCursor } from '../../lib/pagination'
@@ -23,7 +25,7 @@ export function MemberDirectory({ api, viewer, online, busy, collections, revisi
       <td data-label="Associado"><b>{m.name}</b>{!viewer && <><p>{m.email}</p><p>{m.phone}</p></>}</td><td data-label="CPF">{m.cpf}</td>
       <td data-label="Situação">{m.blocked ? 'Bloqueado' : m.eligible ? 'Benefício disponível' : 'Benefício indisponível'}</td><td data-label="Economia">{reportMoney(m.savingsCents)}</td>
       {!viewer && <td data-label="Ações"><div className="row-actions"><Button variant="outline" disabled={!online || busy} onClick={() => select({ type: 'block', id: m.id, name: m.name, member: m })}>{m.blocked ? 'Desbloquear' : 'Bloquear'}</Button>{collections && m.invoiceId && <><Button variant="outline" disabled={!online || busy} onClick={() => select({ type: 'link', id: m.id, name: m.name, member: m })}>Enviar link</Button><Button variant="outline" disabled={!online || busy} onClick={() => select({ type: 'retry', id: m.id, name: m.name, member: m })}>Retentar fatura</Button></>}</div></td>}
-    </tr>)}</tbody></table></div> : <p>Nenhum associado encontrado.</p>)}
+    </tr>)}</tbody></table></div> : <EmptyState icon={Users} title={query ? 'Nenhum resultado encontrado' : collections ? 'Nenhuma cobrança encontrada' : 'Nenhum associado cadastrado'} description={query ? 'Confira o nome informado ou limpe a busca para ver outros associados.' : collections ? 'As assinaturas com pagamento pendente aparecerão aqui.' : 'Os associados aparecerão aqui quando concluírem o cadastro.'} />)}
     <PageControls label="Páginas de associados" page={page} />
   </section>
 }

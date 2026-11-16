@@ -9,6 +9,9 @@ try {
   assert.equal((await call({ action: 'staff' })).status, 401)
   assert.equal((await call({ action: 'staff' }, session.access_token)).status, 403)
   assert.equal((await call({ action: 'collection' }, session.access_token)).status, 403)
+  const removedTestPartner = await call({ action: 'test-partner' }, session.access_token)
+  assert.equal(removedTestPartner.status, 400)
+  assert.equal((await removedTestPartner.json()).error, 'Ação não disponível.')
   const webhook = await fetch(`${local.url}/functions/v1/stripe-webhook`, { method: 'POST', body: '{}', signal: AbortSignal.timeout(60000) })
   assert.ok([400, 503].includes(webhook.status))
   const removedChannel = await fetch(`${local.url}/functions/v1/phone-code`, {

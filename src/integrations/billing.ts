@@ -2,14 +2,16 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { IntegrationError } from './contracts.ts'
 
 // Contract for the future authenticated Edge Function. No browser-selected price/member/role.
-export function createSandboxBilling(client: SupabaseClient) {
+export function createBilling(client: SupabaseClient, environment = 'local') {
+  if (!['local', 'sandbox', 'production'].includes(environment)) throw new IntegrationError('Ambiente de pagamento inválido.')
+  const live = environment === 'production'
   return {
     async createCheckout(operationId: string): Promise<{ url: string }> {
       if (!/^[0-9a-f-]{36}$/i.test(operationId)) throw new IntegrationError('Operação de pagamento inválida.')
       const { data: session, error: authError } = await client.auth.getSession()
       if (authError || !session.session) throw new IntegrationError('Entre antes de abrir o pagamento.')
       const { data, error } = await client.functions.invoke('rkmed-api', { body: { action: 'checkout', operationId } })
-      if (error || !data || data.livemode !== false || typeof data.url !== 'string') {
+      if (error || !data || data.livemode !== live || typeof data.url !== 'string') {
         throw new IntegrationError('O pagamento ainda não está disponível. Nenhum benefício foi ativado.')
       }
       let url: URL

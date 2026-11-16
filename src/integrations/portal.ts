@@ -8,7 +8,6 @@ export class PortalConnectionError extends Error {}
 export type PortalMember = { id: string; name: string; cpf: string; photoPath: string | null; cardToken: string; eligible: boolean; blocked: boolean; paidThrough: string | null; billingState: string; cancelAtPeriodEnd: boolean; joinedAt: string; email?: string | null; phone?: string | null }
 export type PortalContext = { userId: string; role: 'pending' | 'member' | 'partner' | 'admin' | 'support' | 'viewer'; partnerId?: string; partner?: PublicPartner & { isTest: boolean }; member?: PortalMember; workSession?: { employeeId: string; employeeName: string; partnerId: string } }
 export type SupportRequest = { id: string; memberId: string; memberName: string; message: string; status: 'open' | 'answered' | 'closed'; response: string | null; createdAt: string; answeredAt: string | null; deliveryStatus: 'pending' | 'failed' | 'sent' | null; deliveryAttempts: number }
-export type TestPartnerResult = { partnerId: string; name: string; email: string; employeeName: string; establishmentCode: string; isTest: true }
 export type StaffRole = 'admin' | 'support' | 'viewer' | 'partner'
 export type StaffAccount = { id: string; email: string; role: StaffRole; active: boolean; partnerId: string | null; partnerName: string | null; isTest: boolean; createdAt: string; lastSignInAt: string | null; revision: number }
 export type StaffAudit = { id: string; action: string; reason: string | null; createdAt: string; actorEmail: string | null }
@@ -45,7 +44,10 @@ export function portal(client: SupabaseClient) {
     context: () => rpc<PortalContext>('rk_context'),
     operationalSummary: () => rpc<OperationalSummary>('rk_operational_summary'),
     watchOperations: (changed: () => void, state: (value: OperationalConnection) => void) => watchOperations(client, changed, state),
-    staffPartners: () => rpc<(PublicPartner & { active: boolean; isTest: boolean; establishmentCode: string | null })[]>('rk_staff_partners'),
+    async staffPartners() {
+      const rows = await rpc<(PublicPartner & { active: boolean; isTest: boolean; establishmentCode: string | null; street?: string; number?: string | null; complement?: string | null; neighborhood?: string; postalCode?: string; city?: string; state?: string; cnpj?: string | null; phone?: string | null; email?: string | null })[]>('rk_staff_partners')
+      return rows.map(row => ({ ...row, photoUrl: row.photoPath ? client.storage.from('partner-photos').getPublicUrl(row.photoPath).data.publicUrl : null }))
+    },
     adminOverview: () => rpc<AdminOverview>('rk_admin_overview'),
     supportPage: (cursor: PageCursor | null = null, status = '') => rpc<CursorPage<SupportRequest>>('rk_support_requests', { p_at: cursor?.at || null, p_id: cursor?.id || null, p_status: status }),
     answerSupport: (id: string, response: string) => rpc<void>('rk_answer_support_request', { p_id: id, p_response: response }),
@@ -59,10 +61,16 @@ export function portal(client: SupabaseClient) {
     async subscription() { return this.command<MemberSubscription>('subscription') },
     report: (filter: ReportFilter) => rpc<PurchaseReport>('rk_report', { p_from: filter.from, p_to: filter.to, p_partner: filter.partnerId }),
     exportPurchases: (filter: ReportFilter) => rpc<PurchaseExport>('rk_export_purchases', { p_from: filter.from, p_to: filter.to, p_partner: filter.partnerId }),
-    partners: () => rpc<PublicPartner[]>('rk_partners'),
+    async partners() {
+      const rows = await rpc<PublicPartner[]>('rk_partners')
+      return rows.map(row => ({ ...row, photoUrl: row.photoPath ? client.storage.from('partner-photos').getPublicUrl(row.photoPath).data.publicUrl : null }))
+    },
     purchasesPage: (cursor: PageCursor | null = null, savings = false) => rpc<CursorPage<PortalPurchase>>('rk_purchases_page', { p_at: cursor?.at || null, p_id: cursor?.id || null, p_savings: savings }),
     membersPage: (cursor: PageCursor | null = null, query = '', pastDue = false) => rpc<CursorPage<AdminMember>>('rk_members_page', { p_at: cursor?.at || null, p_id: cursor?.id || null, p_query: query, p_past_due: pastDue }),
     queue: () => rpc<{ id: string; memberName: string; kind: string; status: string; attempts: number; createdAt: string }[]>('rk_delivery_queue'),
+    partnerEmployees: (partnerId: string) => rpc<PortalEmployee[]>('rk_partner_employees', { p_partner: partnerId }),
+    createPartnerEmployee: (partnerId: string, name: string) => rpc<{ id: string; code: string }>('rk_create_partner_employee', { p_partner: partnerId, p_name: name }),
+    partnerPurchasesPage: (partnerId: string, cursor: PageCursor | null = null) => rpc<CursorPage<PortalPurchase>>('rk_partner_purchases_page', { p_partner: partnerId, p_at: cursor?.at || null, p_id: cursor?.id || null }),
     employees: () => rpc<PortalEmployee[]>('rk_employees'),
     startWork: (code: string, establishmentCode: string) => rpc<PortalContext>('rk_start_work', { p_code: code, p_establishment_code: establishmentCode.trim().toUpperCase() }),
     endWork: () => rpc<void>('rk_end_work'),
@@ -71,7 +79,13 @@ export function portal(client: SupabaseClient) {
     commit: (receipt: string, quote: Quote, operation: string) => rpc<{ id: string; duplicate: boolean }>('rk_commit_purchase', { p_receipt: receipt, p_gross: quote.grossCents, p_quote_bps: quote.discountBps, p_operation: operation }),
     reverse: (purchase: string, reason: string) => rpc<string>('rk_reverse_purchase', { p_purchase: purchase, p_reason: reason }),
     block: (member: string, blocked: boolean, reason: string) => rpc<void>('rk_set_block', { p_member: member, p_blocked: blocked, p_reason: reason }),
-    savePartner: (partner: { name: string; segment: string; address: string; discountBps: number; id?: string; active?: boolean }) => rpc<string>('rk_save_partner', { p_name: partner.name, p_segment: partner.segment, p_address: partner.address, p_discount_bps: partner.discountBps, p_id: partner.id || null, p_active: partner.active ?? true }),
+    savePartner: (partner: { name: string; segment: string; street: string; number: string; complement: string; neighborhood: string; postalCode: string; city: string; state: string; description: string; cnpj: string; phone: string; email: string; discountBps: number; photoPath?: string | null; id?: string; active?: boolean }) => rpc<string>('rk_save_partner', { p_name: partner.name, p_segment: partner.segment, p_street: partner.street, p_number: partner.number, p_complement: partner.complement, p_neighborhood: partner.neighborhood, p_postal_code: partner.postalCode, p_city: partner.city, p_state: partner.state, p_description: partner.description, p_cnpj: partner.cnpj, p_phone: partner.phone, p_email: partner.email, p_photo_path: partner.photoPath || null, p_discount_bps: partner.discountBps, p_id: partner.id || null, p_active: partner.active ?? true }),
+    async uploadPartnerPhoto(partnerId: string, photo: Blob) {
+      const path = `partners/${partnerId}/photo.jpg`
+      const { error } = await client.storage.from('partner-photos').upload(path, photo, { contentType: 'image/jpeg', upsert: true, cacheControl: '300' })
+      if (error) throw new Error('Não foi possível enviar a foto do parceiro.')
+      return path
+    },
     saveEmployee: (employee: { name: string; partnerId: string; code: string; id?: string; active?: boolean }) => rpc<string>('rk_save_employee', { p_name: employee.name, p_partner: employee.partnerId, p_code: employee.code, p_id: employee.id || null, p_active: employee.active ?? true }),
     documents: () => rpc<{ version: string; kind: string; content: string; testOnly: boolean }[]>('rk_documents'),
     enroll: (name: string, cpf: string, birth: string, versions: string[]) => rpc<string>('rk_enroll', { p_name: name, p_cpf: cpf, p_birth: birth, p_versions: versions }),

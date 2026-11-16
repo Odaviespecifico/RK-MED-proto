@@ -1,10 +1,11 @@
 import type { PublicPartner } from '../integrations/contracts'
 import type { PortalMember, PortalPurchase } from '../integrations/portal'
 export type MemberSnapshot = { version: 1; account: string; member: PortalMember; purchases: PortalPurchase[]; partners: PublicPartner[]; photo: string | null; syncedAt: string; savingsCents?: string; historyPartial?: boolean }
-const accountKey = 'rkmed-sandbox-offline-account-v1'
+const namespace = import.meta.env?.VITE_APP_ENV === 'production' ? 'rkmed-production' : 'rkmed-sandbox'
+const accountKey = `${namespace}-offline-account-v1`
 let epoch = 0
 let queue = Promise.resolve()
-function db(): Promise<IDBDatabase> { return new Promise((resolve, reject) => { const request = indexedDB.open('rkmed-sandbox-member-v1', 1); request.onupgradeneeded = () => request.result.createObjectStore('snapshots'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) }) }
+function db(): Promise<IDBDatabase> { return new Promise((resolve, reject) => { const request = indexedDB.open(`${namespace}-member-v1`, 1); request.onupgradeneeded = () => request.result.createObjectStore('snapshots'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) }) }
 async function transaction(mode: IDBTransactionMode, action: (store: IDBObjectStore) => void) { const database = await db(); try { await new Promise<void>((resolve, reject) => { const tx = database.transaction('snapshots', mode); action(tx.objectStore('snapshots')); tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); tx.onabort = () => reject(tx.error) }) } finally { database.close() } }
 export function offlineAccount(account: string | null) {
   if (localStorage.getItem(accountKey) === account) return queue

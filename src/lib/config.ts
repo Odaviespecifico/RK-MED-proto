@@ -1,6 +1,6 @@
 export type PublicConfig = {
   mode: 'demo' | 'sandbox'
-  environment: 'local' | 'sandbox'
+  environment: 'local' | 'sandbox' | 'production'
   supabaseUrl: string
   supabaseKey: string
   projectRef: string
@@ -15,7 +15,14 @@ export function readPublicConfig(env: Record<string, string | boolean | undefine
   const mode = env.VITE_APP_MODE || 'sandbox'
   const environment = env.VITE_APP_ENV || 'local'
   if (mode !== 'demo' && mode !== 'sandbox') throw new Error('VITE_APP_MODE deve ser demo ou sandbox.')
-  if (environment !== 'local' && environment !== 'sandbox') throw new Error('Somente ambientes local e sandbox estão habilitados.')
+  if (environment !== 'local' && environment !== 'sandbox' && environment !== 'production') throw new Error('Ambiente inválido.')
+  if (environment === 'production') {
+    const sandboxRef = String(env.VITE_SANDBOX_SUPABASE_PROJECT_REF || '')
+    const ref = String(env.VITE_SUPABASE_PROJECT_REF || '')
+    const origin = new URL(String(env.VITE_APP_ORIGIN || ''))
+    if (mode !== 'sandbox' || !/^[a-z0-9]+$/.test(sandboxRef) || ref === sandboxRef
+      || origin.protocol !== 'https:' || origin.origin !== env.VITE_APP_ORIGIN) throw new Error('Configure uma origem HTTPS e projetos separados para produção e homologação.')
+  }
   const supabaseUrl = String(env.VITE_SUPABASE_URL || '')
   const supabaseKey = String(env.VITE_SUPABASE_PUBLISHABLE_KEY || '')
   const projectRef = String(env.VITE_SUPABASE_PROJECT_REF || '')
@@ -47,9 +54,15 @@ export function readPublicConfig(env: Record<string, string | boolean | undefine
 // Hosting must never inherit a local/demo configuration from .env.test.
 export function publicBuildEnvironment(values: Record<string, string>, mode: string) {
   const env = Object.fromEntries(Object.entries(values).filter(([key]) => key.startsWith('VITE_')))
+  if (mode !== 'prod' && mode !== 'production' && values.VITE_APP_ENV === 'production') throw new Error('Use build:prod para compilar produção.')
   if (mode === 'demo') env.VITE_APP_MODE = 'demo'
-  else if (mode === 'sandbox' || mode === 'hosted') env.VITE_APP_MODE = 'sandbox'
+  else if (mode === 'sandbox' || mode === 'hosted' || mode === 'stage') env.VITE_APP_MODE = 'sandbox'
+  if (mode === 'stage' && env.VITE_APP_ENV !== 'sandbox') throw new Error('Stage exige o ambiente Supabase de homologação (sandbox).')
   if (mode === 'hosted') env.VITE_APP_ENV = 'sandbox'
+  if (mode === 'prod' || mode === 'production') {
+    if (env.VITE_APP_MODE !== 'sandbox' || env.VITE_APP_ENV !== 'production'
+      || (values.VERCEL_ENV && values.VERCEL_ENV !== 'production')) throw new Error('Build comercial exige configuração de produção e não pode executar em preview.')
+  }
   const config = readPublicConfig(env)
   return { env, config }
 }

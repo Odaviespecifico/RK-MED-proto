@@ -1,3 +1,4 @@
+import { deliveryAllowed } from '../environment.ts'
 type Environment = Record<string, string | undefined>
 
 const palette = { deep: '#17231d', ink: '#1b2923', gold: '#c0a16d', sand: '#e6dfcf', paper: '#ffffff', muted: '#58675b', line: '#e9ebe6', bg: '#f7f7f4' }
@@ -53,12 +54,12 @@ function codeContent(subject: string, code: string) {
 <p style="margin:24px 0 0;font-size:14px;line-height:1.6;color:${palette.muted};">Não compartilhe este código. Se você não solicitou, ignore esta mensagem.</p>`
 }
 
-export function createResendSandbox(env: Environment, transport: typeof fetch = fetch) {
+export function createResend(env: Environment, transport: typeof fetch = fetch) {
   return {
     async send(to: string, subject: string, text: string, operation: string, code?: string, actionLink?: string) {
-      const allowed = (env.RESEND_ALLOWED_TEST_EMAILS || '').split(',').map(email => email.trim().toLowerCase())
-      if (!['local', 'sandbox'].includes(env.APP_ENV || '') || env.RESEND_MODE !== 'transactional-sandbox'
-        || !env.RESEND_API_KEY || !env.RESEND_FROM || (!allowed.includes('*') && !allowed.includes(to.toLowerCase())) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) throw new Error('Entrega de e-mail de teste não configurada ou destinatário não autorizado.')
+      const production = env.APP_ENV === 'production'
+      if (!['local', 'sandbox', 'production'].includes(env.APP_ENV || '') || env.RESEND_MODE !== (production ? 'transactional-production' : 'transactional-sandbox')
+        || !env.RESEND_API_KEY || !env.RESEND_FROM || !deliveryAllowed(env, 'email', to) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) throw new Error('Entrega de e-mail não configurada ou destinatário não autorizado.')
       const from = env.RESEND_FROM.includes('<') ? env.RESEND_FROM : `RKMED <${env.RESEND_FROM}>`
       const html = code
         ? layout(subject, codeContent(subject, code), text)
@@ -67,10 +68,15 @@ export function createResendSandbox(env: Environment, transport: typeof fetch = 
       const result = await transport('https://api.resend.com/emails', { method: 'POST', redirect: 'error', signal: AbortSignal.timeout(10_000),
         headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json', 'Idempotency-Key': `rkmed/${operation}` },
         body: JSON.stringify({ from, to: [to], subject, text, html }) })
-      if (!result.ok) throw new Error('Entrega de e-mail recusada. Verifique a configuração do sandbox.')
+      if (!result.ok) throw new Error('Entrega de e-mail recusada. Verifique a configuração do ambiente.')
       const receipt = await result.json()
       if (typeof receipt?.id !== 'string' || !/^[A-Za-z0-9-]{1,128}$/.test(receipt.id)) throw new Error('O provedor não confirmou o recebimento do e-mail.')
       return { messageId: receipt.id as string }
     },
   }
+}
+
+export function createResendSandbox(env: Environment, transport: typeof fetch = fetch) {
+  if (env.APP_ENV === 'production') return { send: async (..._args: Parameters<ReturnType<typeof createResend>['send']>) => { throw new Error('Adaptador de teste indisponível em produção.') } }
+  return createResend(env, transport)
 }

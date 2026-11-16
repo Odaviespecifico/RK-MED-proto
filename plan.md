@@ -391,3 +391,97 @@ Verificação local: typecheck, builds sandbox/hospedado, 83 testes Node, 297 ve
 D37 publicação: Vercel `dpl_J2pbGLG1qTctsJ6Xhg1LHYhy8qa6` confirmada READY no domínio estável; total hospedado de 20 migrations. RLS e grants service-only verificados por consulta remota. Análise hospedada sem novos avisos nos objetos test_partner; avisos legados mantidos na preparação comercial.
 
 D37 smoke HTTPS aprovado após publicação: rotas públicas conectadas, recusa anônima das novas rotinas de finalização/liberação e ausência de mocks. Nenhum OTP, pagamento ou cadastro hospedado disparado.
+
+## Perfil ampliado de parceiros — 2026-11-09
+
+O cadastro e a edição de parceiros agora incluem nome, endereço estruturado com consulta automática de CEP, descrição e CNPJ obrigatórios; foto, telefone e e-mail de contato são opcionais. As migrations `20261109231502_partner_profile_details.sql` e subsequentes adicionam validação/uniqueness no banco, mantêm contatos restritos a admin/suporte e configuram upload de foto pública com escrita restrita. A projeção pública recebe descrição e foto sem contatos; o cadastro combinado de parceiro de teste exige os mesmos campos obrigatórios. Registros legados mantêm o endereço atual e não recebem dados fictícios. Typecheck, build sandbox e lint SQL passaram. As migrations foram aplicadas ao banco local; ainda não foram aplicadas remotamente e esta alteração não foi publicada.
+
+## Auditoria UX do portal administrativo — 2026-11-09
+
+Revisão das telas conectadas de visão geral, associados, compras, parceiros, relatórios, equipe, cobranças e suporte. Foram identificados e ajustados: gutters e espaçamento internos apertados, tipografia/dados muito pequenos, alertas operacionais repetidos fora das telas relevantes e ação “Atualizar” que não recarregava todas as listas. Ajustes adicionam hierarquia e respiro responsivos, controles maiores e foco visível, skeleton para o resumo, estado vazio para funcionários, indicação semântica da rota ativa e atualização de listas conectadas. Alertas ficam na visão geral e cobranças. Typecheck, build sandbox e diff check passaram; não foi feita navegação visual autenticada nem execução de testes automatizados.
+
+## Execução parcial — cadastro ampliado de parceiros
+
+Corrigido o cálculo de CNPJ no frontend e no gateway para coincidir com a validação SQL; adicionado teste de documento formatado, dígito inválido, repetição e excesso. Fixtures unitária, conectada e de navegador atualizadas para os novos campos; o teste de desempenho passou a importar o helper de código e usar o contexto local da fixture. A consulta de CEP preserva campos editados enquanto a resposta está pendente. Typecheck, build sandbox e 18 arquivos de testes Node (sem Stripe) passaram. A validação conectada, SQL, publicação, segurança, produção e demais etapas do plano ainda não foram concluídas; nenhuma mudança remota foi realizada. A decisão do usuário é não configurar backups por enquanto.
+
+
+## Duas primeiras pendências críticas — 15/11/2026
+
+Solicitação do usuário: implementar suporte explícito a produção e corrigir a falha SQL do cadastro de parceiro. Ambos concluídos localmente; esta solicitação não foi usada para publicar, preencher credenciais live ou liberar tráfego comercial.
+
+Produção: frontend aceita `VITE_APP_ENV=production` apenas com interface conectada, origem HTTPS e projeto distinto do sandbox informado. `build:prod` lê somente `.env.prod`/variáveis explícitas e recusa preview; o seletor Vercel conserva homologação por padrão e exige `RKMED_DEPLOY_ENV=production` no target Production. Manifesto, service worker, snapshots e sessões isolam produção. A aplicação comercial confere a origem em execução.
+
+Handlers API, OTP/recuperação, webhook e jobs aceitam produção com validação de origem/projeto e atestação do ambiente persistido no banco. Migration `20261116011052_production_runtime_guard` fornece RPC somente de serviço. O banco precisa estar configurado explicitamente como production/sandbox/local; a migration não o promove. Stripe valida chaves, conta, preço e objetos/eventos do modo esperado em Checkout, assinatura, cobranças, conciliação e repasses Wedea. ClickSend/Resend exigem modos e listas próprios de produção, sem herdar curingas de homologação. Cadastros de parceiro de teste permanecem negados no gateway/banco e ocultos na interface comercial; textos jurídicos mock continuam recusados.
+
+Causa SQL confirmada por regressão: `private.valid_partner_cnpj` comparava verificadores nas posições 12/13 em vez de 13/14. Migration corretiva `20261116011050_fix_partner_cnpj_check_digits` preserva migrations anteriores. As duas migrations novas foram aplicadas somente ao Docker local, sem reset. O lint ficou sem avisos após retirar declarações redundantes das variáveis de loop.
+
+Verificação: typecheck, build sandbox, build comercial com configuração pública sintética, 95 testes Node e 308 verificações pgTAP aprovados; lint SQL sem erros/avisos. Teste conectado com Auth/Postgres reais locais passou para criação, recuperação após falha, concorrência/replay, login e turno do parceiro, isolamento do diretório e suporte negado. Artefato comercial conferido sem módulo demo/credenciais privadas sintéticas, com manifesto/SW comerciais. Novos testes exercitam os handlers reais de webhook/OTP com transportes injetados, assinatura adulterada, mistura test/live, divergência de banco e recusa de políticas de destinatários de teste em produção.
+
+Pendentes: publicação remota destas mudanças, configuração dos projetos/segredos comerciais e demais aceites externos já registrados. Nenhuma cobrança, SMS/e-mail externo ou alteração remota foi efetuada. Backups continuam adiados conforme decisão anterior. Configuração detalhada em docs/ambientes.md; prontidão em docs/prontidao-producao.md.
+
+
+## Pergunta frequente sobre plano de saúde — 15/11/2026
+
+Adicionada à landing compartilhada a pergunta “É um plano de saúde?”, esclarecendo que RKMED é um clube de benefícios e que os serviços são pagos diretamente aos parceiros com o desconto disponível. Alteração local, sem publicação.
+
+
+## Comando stage — 15/11/2026
+
+Adicionado `npm run stage`: Vite em 127.0.0.1:5175, porta estrita, arquivo exclusivo `.env.stage` e ambiente sandbox HTTPS obrigatório. Não publica, não altera bancos e não muda origens permitidas nas funções hospedadas. Leitura isolada de ambientes coberta pelo teste existente.
+
+## Contraste e paginação compartilhada — 15/11/2026
+
+Corrigida a regra de ações que sobrescrevia o contraste dos botões primários, incluindo Buscar associados. PageControls utiliza composição shadcn/ui em components/ui/pagination.tsx, adaptada para comandos por cursor, com faixa de largura total, anterior/página atual/próxima, estados desabilitados e sem totais fictícios. Aplicada a todas as listas que já compartilham PageControls. Typecheck e diff check aprovados; navegador com componentes reais a 360px e 1280px confirmou largura total, ausência de overflow, cores computadas e navegação anterior/próxima. Alterações locais, sem publicação.
+
+
+## Gestão de funcionários nos detalhes dos parceiros — 15/11/2026
+
+Solicitação vigente: parceiros clicáveis abrem dados completos, edição, uso registrado e cadastro/ativação de funcionários. Removidos formulário e lista de funcionários de Equipe; essa área mantém somente acessos internos. Administração e suporte gerem funcionários nos parceiros; diretoria continua somente leitura, sem contatos/códigos/funcionários. Histórico usa RPC paginada com filtro de parceiro no servidor.
+
+Migration 20261116014002_partner_employee_management adiciona cadastro com código aleatório de quatro dígitos, emitido no banco e retornado apenas ao cadastrar. A reserva bloqueia o parceiro durante a transação e verifica códigos existentes por hash, incluindo inativos; colisões procuram o próximo código livre e o esgotamento dos 10.000 códigos gera erro. Não há persistência do código aberto, exposição à diretoria nem alteração dos códigos legados ou autoria histórica. A API antiga de criação também gera código; atualizações não movem funcionários entre parceiros nem aceitam código manual. No cadastro combinado de parceiro sintético, o primeiro código é gerado automaticamente com crypto no navegador e mantido na mesma operação retomável; por ser parceiro novo, só existe um funcionário inicial.
+
+Validação: typecheck/build sandbox, 95 testes Node, 319 verificações pgTAP e lint SQL aprovados. Três cadastros concorrentes com Auth/Postgres locais reais receberam códigos distintos e isolamento por parceiro; seus funcionários foram removidos, preservando auditoria. Navegador com componentes reais/dados sintéticos a 360px verificou detalhes, uso, cadastro/código transitório, troca de parceiro, edição, Equipe sem funcionários e ausência de overflow. Migration aplicada somente ao Docker local, sem reset. Publicação remota pendente.
+
+
+## Publicação das migrations hospedadas — 15/11/2026
+
+Autorização explícita do usuário para executar migrations no Supabase hospedado. Projeto RK MED `chuyompxoctmpawhfmyb` conferido na conta autenticada. Histórico remoto tinha 21 migrations; simulação identificou seis pendentes. Aplicadas, nesta ordem: `20261109231502`, `20261109235000`, `20261109235900`, `20261116011050`, `20261116011052`, `20261116014002`. Nenhum reset, seed ou atualização de Vault foi executado.
+
+Verificação posterior: novo dry-run retornou `upToDate=true`, sem pendências. Consulta remota confirmou 27 migrations, CNPJ válido aceito/inválido recusado, criação de funcionário negada a anônimos, RPC de ambiente exclusiva do backend e histórico paginado de parceiro disponível. Não foram criados funcionários, cadastros ou pagamentos de teste no remoto. Frontend e Edge Functions não foram publicados nesta operação; os novos contratos de parceiro exigem publicação correspondente da aplicação/funções antes do aceite integrado.
+
+
+## Publicação das Edge Functions — 15/11/2026
+
+Solicitação explícita do usuário atendida no Supabase de homologação RK MED `chuyompxoctmpawhfmyb`. Publicadas e confirmadas ACTIVE: rkmed-api v10, rkmed-stripe-webhook v8, phone-code v14, provider-jobs v10, auth-sms v10 e auth-email v9. Empacotamento com scripts/dev/package-functions.mjs preservou o modelo facial embarcado e a origem HTTPS sandbox. Funções legadas, configuração de secrets, frontend e dados não foram alterados.
+
+Typecheck aprovado. Smoke HTTP pós-publicação: API sem sessão 401; solicitação OTP inválida 400; worker sem bearer 403; webhook sem assinatura 400; hooks Auth nativos aposentados 503; preflight CORS da origem hospedada 200. Recuperação com e-mail vazio retornou accepted=true após atestação do ambiente do banco, sem gerar link/enviar mensagem. Nenhum OTP, cadastro ou pagamento foi executado. Frontend atualizado continua pendente de publicação e o aceite integrado completo permanece pendente.
+
+## Cadastros de parceiros e acessos — 16/11/2026
+
+Os cadastros principais têm listagem com busca, modal em etapas, revisão, validação e recuperação de rascunho por usuário e projeto por até 24 horas. Senhas e arquivos permanecem em memória; descarte, navegação interna, saída e sucesso removem o rascunho. A sessão Supabase migra de localStorage para IndexedDB, com fallback em memória quando indisponível. O cadastro especial de parceiro de teste mantém seu fluxo de recuperação anterior, separado.
+
+Verificações locais incluem jornadas em navegador nas larguras 360 e 1280, teclado, movimento reduzido, recuperação após reiniciar o navegador, falhas de armazenamento, integração com Auth/RPC/Edge locais e permissões pgTAP. Não substituem aceite de acessibilidade nem testes em aparelhos físicos. Alterações desta etapa estão locais; nenhuma publicação remota foi feita.
+
+## Remoção do cadastro de parceiro de teste — 16/11/2026
+
+Por solicitação do usuário, removidos da aplicação o formulário especial e a ação `test-partner` da Edge Function. Registros e contas já existentes não são excluídos ou convertidos: a identificação e o ocultamento desses parceiros no diretório permanecem. As migrations históricas e dados de auditoria são preservados. Validados typecheck, build sandbox, 89 testes Node, jornada de cadastro e rejeição da ação na Edge Function local. A alteração precisa de publicação do frontend e da Edge Function para valer no ambiente hospedado.
+
+## Banco stage dedicado — 16/11/2026
+
+Projeto `wfgiokooedjalmvqgbub` estava sem usuários, tabelas privadas ou migrations. Aplicadas as 27 migrations, sem seed ou alteração de Vault, e configurado `private.settings.environment=sandbox`. Dry-run posterior sem pendências; CNPJ, recusa de permissões anônimas e RPC pública verificados. `.env.stage` atualizado com referência, URL e chave publicável do novo projeto, preservando as demais variáveis. Não há Edge Functions publicadas ou usuário administrador no stage.
+
+Comparado com `chuyompxoctmpawhfmyb`, projeto atualmente publicado e documentado como homologação: versões das 27 migrations e objetos dos schemas public/private coincidem, exceto cinco funções legadas adicionais no publicado; três delas estão ligadas a gatilhos em Auth, Stripe ou eventos DDL. Não foram copiadas automaticamente. Comparação detalhada e limites em `docs/ambientes.md`. A porta padrão 5175 já estava ocupada; Vite stage iniciou em 5185. Não houve alteração no banco publicado.
+
+## Refinamento dos modais de cadastro — 16/11/2026
+
+Aplicada a referência visual enviada aos cadastros de parceiros e acessos internos, preservando fontes e paleta RKMED. Cabeçalho centralizado, etapas numeradas com conclusão, campos em duas colunas no desktop e uma no celular, botões arredondados e rodapé de ações. Centralização do dialog corrigida com margens automáticas explícitas após o reset CSS. Altura limitada à tela, com rolagem interna inclusive a 360×540.
+
+Typecheck e build sandbox aprovados; jornadas dos dois cadastros em navegador cobrem validação, teclado, foco, descarte e recuperação. Teste geométrico confirma centro vertical/horizontal, ações acessíveis e ausência de overflow em 1280×900, 360×820 e 360×540. Inspeção visual em desktop/celular emulados. Sem publicação ou teste em dispositivo físico.
+
+## CORS e domínio do frontend — 16/11/2026
+
+Reproduzido preflight de `phone-code`: projeto anterior retornava 403 sem CORS para 127.0.0.1:5175; stage retornava 404 sem função. Compartilhado validador de origens exatas, com lista adicional explícita para homologação, preservando origem canônica em retornos/callbacks. Atualizados APP_ORIGIN para https://rkmed.vercel.app e lista local 5175 nos dois projetos; publicados phone-code e rkmed-api. Stage recebeu apenas as configurações OTP necessárias do arquivo local, sem cópia de banco ou chaves Stripe. Atualizados site_url e redirecionamentos Auth, preservando propriedades não declaradas. Typecheck e 90 testes Node aprovados, incluindo regressão de CORS nos handlers reais.
+
+Branch local stage já estava no commit 13b77ff35457b0bbcb7033a3e43b843d8b633dc0, igual a main e origin/main após fetch. GitHub não tinha branch remota stage; tentativa de push sem sucesso por falta de autenticação HTTPS. Árvore de trabalho mantida na main, sem incluir alterações locais na stage.
+
+Verificação hospedada: navegador com origem http://127.0.0.1:5175 acessou phone-code e rkmed-api nos dois projetos sem erro CORS, com rejeições esperadas 400/401 a corpos inválidos/sem sessão. Preflight do domínio novo também retornou 200 com origem exata; origem desconhecida retornou 403 sem liberação. Não foram enviados OTPs ou criados cadastros.

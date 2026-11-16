@@ -1,4 +1,17 @@
 export class PublicError extends Error {}
+// Match complete origins only; callbacks keep using the canonical APP_ORIGIN.
+export function allowedRequestOrigin(request: Request, env: Record<string, string | undefined>) {
+  const origin = request.headers.get('origin')
+  if (!origin || origin === 'null') return undefined
+  try {
+    const url = new URL(origin)
+    if (url.origin !== origin) return undefined
+    const loopback = url.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(url.hostname)
+    if (url.protocol !== 'https:' && !(loopback && ['local', 'sandbox'].includes(env.APP_ENV || ''))) return undefined
+    const allowed = [env.APP_ORIGIN, ...(env.CORS_ALLOWED_ORIGINS || '').split(',').map(value => value.trim())]
+    return allowed.includes(origin) ? origin : undefined
+  } catch { return undefined }
+}
 export async function boundedBody(request: Request, max = 64 * 1024) {
   if (Number(request.headers.get('content-length') || 0) > max || !request.body) throw new Error('Requisição inválida.')
   const reader = request.body.getReader()

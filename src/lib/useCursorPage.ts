@@ -28,6 +28,7 @@ export function useCursorPage<T>(load: (cursor: PageCursor | null) => Promise<Cu
     canPrevious: index > 0, canNext: !!data?.hasMore,
     next() { if (!loading && data?.nextCursor) { setCursors([...cursors.slice(0, index + 1), data.nextCursor]); setIndex(index + 1) } },
     previous() { if (!loading && index > 0) setIndex(index - 1) },
+    reload() { setEpoch(value => value + 1); setResponse(null) },
     refresh() { setCursors([null]); setIndex(0); setEpoch(value => value + 1); setResponse(null) },
   }
 }

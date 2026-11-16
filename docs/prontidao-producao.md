@@ -1,4 +1,4 @@
-# Prontidão e liberação para produção — 09/11/2026
+# Prontidão e liberação para produção — revisão local de 15/11/2026
 
 **Resultado:** homologação publicada e conectada ao banco real. Produção comercial ainda não liberada.
 
@@ -28,7 +28,7 @@ O banco hospedado começou e terminou a verificação sem associados, parceiros 
 
 ## Bloqueios para lançamento comercial
 
-- Ambiente de produção separado, suporte explícito a produção nos runtimes, segredos live e isolamento de previews. Os bloqueios atuais foram preservados.
+- Ambiente comercial separado, segredos live e aceite externo ainda pendentes. Suporte explícito a produção foi implementado localmente em 15/11; projetos, origem HTTPS, banco e modos dos provedores são validados. Nenhum ambiente remoto foi alterado.
 - Documentos jurídicos finais, retenção/exclusão, atendimento e conteúdo operacional aprovados. Os documentos atuais são de teste e não servem para produção.
 - Monitoramento e alertas; backup de banco **e fotos** com restauração ensaiada, responsáveis e procedimentos de recuperação.
 - Revisar avisos legados de segurança: `search_path` mutável, grants de funções definer, prazo do OTP nativo e proteção de senhas. Tabelas privadas com RLS sem políticas mantêm negação direta intencional; RPCs públicas de documentos/parceiros são deliberadas.
@@ -38,13 +38,13 @@ Critério de liberação: todos os itens de aceite e bloqueios acima precisam de
 
 ## Procedimento de liberação comercial
 
-**Este procedimento ainda não pode ser executado.** O código e os adaptadores ativos recusam `APP_ENV=production`; `build:prod` é reservado e mantém essa recusa. Não promover o deploy estável atual, não apontar o domínio comercial para o Supabase de homologação e não colocar chaves live em `.env.test`.
+**A liberação comercial continua pendente dos demais critérios.** O código agora suporta `APP_ENV=production` e `build:prod`, com configuração explícita e isolamento. Isso foi validado localmente, sem chaves live ou aceite externo. Não promover o deploy de homologação nem colocar chaves live em `.env.test`. Ver a configuração comercial em [ambientes](ambientes.md#configuração-comercial-explícita--15112026).
 
 Quando os bloqueios acima forem encerrados, conduzir a liberação nesta ordem:
 
 1. **Fechar e registrar o aceite:** resolver os bloqueios e critérios de homologação; atualizar esta página com evidências, data, responsáveis e versão exata do código. Obter aprovação dos responsáveis por operação, jurídico e financeiro.
 2. **Preparar ambientes isolados:** criar projeto Supabase e projeto/target Vercel próprios para produção. Separar domínio, banco, Storage, Auth, webhooks, segredos, logs, backups e dados. Revisar que previews e homologação não possam acessar recursos live.
-3. **Habilitar produção no código:** implementar e revisar suporte explícito a `APP_ENV=production` nos validadores de frontend, Edge Functions e provedores. Definir configurações de produção sem permissões de teste, mantendo homologação isolada. Só então habilitar `build:prod` e validar o artefato resultante.
+3. **Configurar o suporte comercial implementado:** preencher as variáveis próprias de produção, aplicar a migration de atestação do ambiente e conferir o build comercial no target separado. Frontend, handlers, Stripe, ClickSend e Resend já possuem suporte local; homologação permanece usando seus próprios modos/listas/chaves. Validar o artefato com a configuração real aprovada antes de abrir tráfego.
 4. **Preparar Supabase:** revisar migrations desde uma base vazia, grants, RLS, funções privilegiadas, Auth URLs/redirects/hooks, políticas de senha, limites e Storage privado. Configurar secrets somente no projeto de produção. Fazer backup antes de cada alteração de schema; aplicar migrations versionadas sem reset nem seeds de teste; verificar histórico e políticas após cada lote.
 5. **Preparar provedores live:** configurar credenciais e remetentes de produção de ClickSend/Resend, Stripe live, Connect/Wedea, webhook com endpoint e assinatura próprios, portal de cobrança e worker agendado. Confirmar destinatários, limites, idempotência e alertas sem reutilizar contas ou segredos de teste.
 6. **Preparar operação e recuperação:** ativar monitoramento e alertas, retenção e acesso aos logs, backups de banco e fotos, restauração ensaiada, responsáveis de plantão e procedimentos para indisponibilidade, vazamento, cobrança incorreta e reversão de versão/migration.
@@ -65,8 +65,31 @@ D35/D36: suporte com histórico próprio do associado, resposta e encerramento, 
 
 Publicação D35/D36: Vercel READY no domínio estável, migration aplicada sem seeds/reset, três handlers atualizados e smoke HTTPS aprovado. Análise hospedada aponta avisos conhecidos de objetos legados e das RPCs security definer intencionalmente expostas a authenticated; as novas RPCs verificam papel/sessão no servidor e as rotinas de credenciais/destinatários permanecem exclusivas de service_role. Avisos legados e configurações Auth continuam na lista de preparação comercial acima.
 
-D37: cadastro completo de parceiro de teste em Admin → Parceiros, exclusivo de admin e somente local/sandbox. Cria estabelecimento ativo oculto dos associados, conta Auth e primeiro funcionário. Marca de teste preservada na gestão; contexto do próprio parceiro permite identificação e mapa sem expô-lo no diretório público. Operação recuperável por reserva privada, com finalização transacional, repetição controlada e bloqueio de identidades pendentes. Credenciais não entram em auditoria ou armazenamento persistente do navegador.
+D37 (histórico): o cadastro completo de parceiro de teste foi removido localmente em 16/11/2026. A identificação e o ocultamento de registros anteriores permanecem; a remoção ainda depende da publicação do frontend e da Edge Function. A implementação anterior era exclusiva de admin e usava reserva privada recuperável.
 
 Publicação D37: migration 20261109201327 aplicada sem seeds/reset (20 migrations), gateway rkmed-api atualizado e Vercel `dpl_J2pbGLG1qTctsJ6Xhg1LHYhy8qa6` READY no domínio estável. Confirmados RLS da reserva e ausência de EXECUTE para navegadores nas rotinas privilegiadas; análise hospedada manteve 49 avisos conhecidos, sem novos avisos nos objetos test_partner. Fluxo completo e falha/recuperação verificados com Auth/Edge/Postgres reais locais e navegador a 360px. Nenhuma conta/parceiro sintético inserido no ambiente hospedado durante a publicação.
 
 D37 smoke HTTPS aprovado após publicação: rotas públicas conectadas, recusa anônima das novas rotinas de finalização/liberação e ausência de mocks. Nenhum OTP, pagamento ou cadastro hospedado disparado.
+
+
+## Correções e suporte comercial locais — 15/11/2026
+
+Correção `20261116011050_fix_partner_cnpj_check_digits`: o SQL comparava os verificadores nas posições 12/13 em vez de 13/14 e recusava um CNPJ válido. A correção preserva migrations anteriores, adiciona regressões e foi aplicada somente no Docker local, sem reset. O fluxo conectado de parceiro com Auth/Postgres reais passou: recuperação após falha, concorrência/replay, diretório oculto, login, códigos de estabelecimento/funcionário e recusa de suporte.
+
+Suporte comercial: validação explícita de projeto/origem/target, modo Stripe em Checkout, assinatura, webhook, cobrança, notificações e Wedea; políticas próprias de destinatários de produção; recuperação de senha; atestação do ambiente do banco via RPC de serviço. Cadastro sintético continua bloqueado em produção. Documentos jurídicos de teste continuam recusados. O projeto Vercel existente conserva homologação por padrão.
+
+Validação local: typecheck, builds sandbox e comercial (configuração pública sintética), 95 testes Node e 308 verificações pgTAP aprovados; lint SQL sem erros/avisos. Artefato comercial conferido sem módulo demo ou credenciais privadas sintéticas. A publicação das migrations, funções e frontend permanece pendente e não foi executada nesta rodada. Backups continuam adiados pela decisão registrada do usuário; não foram configurados.
+
+
+## Publicação das migrations hospedadas — 15/11/2026
+
+Autorização explícita do usuário para executar migrations no Supabase hospedado. Projeto RK MED `chuyompxoctmpawhfmyb` conferido na conta autenticada. Histórico remoto tinha 21 migrations; simulação identificou seis pendentes. Aplicadas, nesta ordem: `20261109231502`, `20261109235000`, `20261109235900`, `20261116011050`, `20261116011052`, `20261116014002`. Nenhum reset, seed ou atualização de Vault foi executado.
+
+Verificação posterior: novo dry-run retornou `upToDate=true`, sem pendências. Consulta remota confirmou 27 migrations, CNPJ válido aceito/inválido recusado, criação de funcionário negada a anônimos, RPC de ambiente exclusiva do backend e histórico paginado de parceiro disponível. Não foram criados funcionários, cadastros ou pagamentos de teste no remoto. Frontend e Edge Functions não foram publicados nesta operação; os novos contratos de parceiro exigem publicação correspondente da aplicação/funções antes do aceite integrado.
+
+
+## Publicação das Edge Functions — 15/11/2026
+
+Solicitação explícita do usuário atendida no Supabase de homologação RK MED `chuyompxoctmpawhfmyb`. Publicadas e confirmadas ACTIVE: rkmed-api v10, rkmed-stripe-webhook v8, phone-code v14, provider-jobs v10, auth-sms v10 e auth-email v9. Empacotamento com scripts/dev/package-functions.mjs preservou o modelo facial embarcado e a origem HTTPS sandbox. Funções legadas, configuração de secrets, frontend e dados não foram alterados.
+
+Typecheck aprovado. Smoke HTTP pós-publicação: API sem sessão 401; solicitação OTP inválida 400; worker sem bearer 403; webhook sem assinatura 400; hooks Auth nativos aposentados 503; preflight CORS da origem hospedada 200. Recuperação com e-mail vazio retornou accepted=true após atestação do ambiente do banco, sem gerar link/enviar mensagem. Nenhum OTP, cadastro ou pagamento foi executado. Frontend atualizado continua pendente de publicação e o aceite integrado completo permanece pendente.

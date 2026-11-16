@@ -1,4 +1,4 @@
-export type PublicPartner = { id: string; name: string; segment: string; discount: number; address: string; initials: string; tone: string }
+export type PublicPartner = { id: string; name: string; segment: string; discount: number; address: string; initials: string; tone: string; description?: string | null; photoPath?: string | null; photoUrl?: string | null }
 export type OtpChannel = 'email' | 'sms'
 export type OtpRequest = { contact: string; channel: OtpChannel }
 export type MemberAuth = {

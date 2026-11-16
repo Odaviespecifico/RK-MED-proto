@@ -8,6 +8,7 @@ try {
   async function login(email) { await page.goto(`${origin}/acesso-admin`); await page.getByLabel('E-mail', { exact: true }).fill(email); await page.getByLabel('Senha', { exact: true }).fill('RKMED-local-test-2026!'); await page.getByRole('button', { name: 'Entrar', exact: true }).click(); await page.getByRole('img', { name: 'QR do cartão do associado' }).waitFor() }
   const cached = () => page.evaluate(async () => { const database = await new Promise((resolve, reject) => { const req = indexedDB.open('rkmed-sandbox-member-v1', 1); req.onsuccess = () => resolve(req.result); req.onerror = reject }); try { return await new Promise((resolve, reject) => { const req = database.transaction('snapshots').objectStore('snapshots').getAll(); req.onsuccess = () => resolve(req.result); req.onerror = reject }) } finally { database.close() } })
   await login('ana@rkmed.test')
+  assert.equal(await page.evaluate(() => Object.entries(localStorage).some(([key, value]) => key.startsWith('rkmed-auth-') || value.includes('access_token') || value.includes('refresh_token'))), false)
   async function waitSnapshot(accountSuffix) {
     const deadline = Date.now() + 30000
     while (Date.now() < deadline) {
@@ -41,6 +42,7 @@ try {
   assert.equal((await cached()).length, 0)
   assert.equal(await page.evaluate(() => localStorage.getItem('rkmed-sandbox-offline-account-v1')), null)
   assert.equal(await page.evaluate(() => localStorage.getItem('rkmed-auth-local-local')), null)
+  assert.equal(await page.evaluate(async () => { const db = await new Promise((resolve, reject) => { const request = indexedDB.open('rkmed-auth-storage-v1'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) }); try { return await new Promise((resolve, reject) => { const request = db.transaction('sessions').objectStore('sessions').get('rkmed-auth-local-local'); request.onsuccess = () => resolve(request.result ?? null); request.onerror = () => reject(request.error) }) } finally { db.close() } }), null)
   await context.setOffline(false)
   await login('carlos@rkmed.test')
   await page.waitForFunction(() => localStorage.getItem('rkmed-sandbox-offline-account-v1')?.endsWith('000000000002'))

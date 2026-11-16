@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readPublicConfig } from '../../src/lib/config.ts'
 import { normalizeContact, createMemberAuth } from '../../src/integrations/auth.ts'
-import { createSandboxBilling } from '../../src/integrations/billing.ts'
+import { createBilling } from '../../src/integrations/billing.ts'
 import { createTwilioSandbox } from '../../supabase/functions/_shared/providers/twilio.ts'
 import { createStripeSandbox } from '../../supabase/functions/_shared/providers/stripe.ts'
 import { createResendSandbox } from '../../supabase/functions/_shared/providers/resend.ts'
@@ -128,7 +128,7 @@ test('Stripe server retries preserve all idempotent request parameters and never
 test('browser billing fails closed without session/backend or for a non-Stripe response URL', async () => {
   let invocations = 0
   const client = { auth: { getSession: async () => ({ data: { session: null } }) }, functions: { invoke: async () => { invocations++; return { data: null, error: true } } } }
-  const billing = createSandboxBilling(client)
+  const billing = createBilling(client)
   await assert.rejects(() => billing.createCheckout(operation))
   assert.equal(invocations, 0)
   client.auth.getSession = async () => ({ data: { session: {} } })

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { sendWedeaShare } from '../../supabase/functions/_shared/wedea.ts'
 import { processEvent } from '../../supabase/functions/_shared/billing.ts'
 
-function fixture(overrides = {}) {
+function fixture(overrides = {}, live = false) {
   const share = { invoice_id: 'in_test', customer_id: 'cus_test', subscription_id: 'sub_test',
     amount_cents: 1587, status: 'pending', destination: null, charge_id: null, use_source: null, ...overrides }
   const calls = []
@@ -24,23 +24,23 @@ function fixture(overrides = {}) {
     } else assert.fail(name)
     return { data, error: null }
   } }
-  const charge = { id: 'ch_test', paid: true, status: 'succeeded', amount: 6990, currency: 'brl', customer: 'cus_test', livemode: false }
+  const charge = { id: 'ch_test', paid: true, status: 'succeeded', amount: 6990, currency: 'brl', customer: 'cus_test', livemode: live }
   const stripe = {
-    v2: { core: { accounts: { retrieve: async () => ({ livemode: false,
+    v2: { core: { accounts: { retrieve: async () => ({ livemode: live,
       configuration: { recipient: { capabilities: { stripe_balance: { stripe_transfers: { status: 'active' } } } } },
       defaults: { responsibilities: { fees_collector: 'application', losses_collector: 'application' } },
     }) } } },
-    invoicePayments: { list: async () => ({ has_more: false, data: [{ invoice: 'in_test', amount_paid: 6990, currency: 'brl', livemode: false,
+    invoicePayments: { list: async () => ({ has_more: false, data: [{ invoice: 'in_test', amount_paid: 6990, currency: 'brl', livemode: live,
       payment: { type: 'payment_intent', payment_intent: 'pi_test' } }] }) },
-    paymentIntents: { retrieve: async () => ({ livemode: false, status: 'succeeded', currency: 'brl', customer: 'cus_test', latest_charge: 'ch_test' }) },
+    paymentIntents: { retrieve: async () => ({ livemode: live, status: 'succeeded', currency: 'brl', customer: 'cus_test', latest_charge: 'ch_test' }) },
     charges: { retrieve: async () => charge },
     transfers: { create: async (params, options) => {
       calls.push({ name: 'transfer', params, options })
       if (transferError) throw new Error('Response lost')
-      return { id: 'tr_test', livemode: false, amount: params.amount, currency: params.currency, destination: params.destination }
+      return { id: 'tr_test', livemode: live, amount: params.amount, currency: params.currency, destination: params.destination }
     } },
   }
-  const env = { STRIPE_WEDEA_ACCOUNT_ID: 'acct_wedea', STRIPE_TEST_ACCOUNT_ID: 'acct_rkmed' }
+  const env = { APP_ENV: live ? 'production' : 'local', STRIPE_WEDEA_ACCOUNT_ID: 'acct_wedea', STRIPE_TEST_ACCOUNT_ID: 'acct_rkmed', STRIPE_ACCOUNT_ID: 'acct_rkmed' }
   return { share, db, stripe, env, calls, charge, loseResponse: () => { transferError = true }, restore: () => { transferError = false; share.owner = null } }
 }
 
@@ -109,7 +109,7 @@ test('D27: refund and dispute events queue risk review without touching Wedea tr
   for (const type of ['charge.refunded', 'charge.dispute.created']) {
     const calls = []
     const db = { rpc: async name => { calls.push(name); return { data: name === 'rk_event_record' ? 'pending' : null, error: null } } }
-    const stripe = { charges: { retrieve: async () => ({ customer: 'cus_test' }) } }
+    const stripe = { charges: { retrieve: async () => ({ customer: 'cus_test', livemode: false }) } }
     await processEvent(db, stripe, {}, { id: 'evt_risk', type, livemode: false, created: 1,
       data: { object: { id: type === 'charge.refunded' ? 'ch_test' : 'dp_test', charge: 'ch_test' } } })
     assert.deepEqual(calls, ['rk_event_record', 'rk_backend_risk', 'rk_event_finish'])
@@ -145,4 +145,22 @@ test('D27: paid renewal reconciles and reserves atomically before transfer; miss
   assert.equal(statuses.get('evt_paid'), 'processed')
   await processEvent(f.db, f.stripe, env, event)
   assert.equal(f.calls.filter(c => c.name === 'transfer').length, 1)
+})
+
+test('D27: live transfer checks recipient capability and rejects resources from test mode', async () => {
+  const f = fixture({}, true)
+  await sendWedeaShare(f.db, f.stripe, f.env, 'in_test')
+  assert.equal(f.share.status, 'sent')
+  assert.equal(f.calls.filter(c => c.name === 'transfer').length, 1)
+  for (const boundary of ['account', 'payment', 'intent', 'charge', 'transfer']) {
+    const bad = fixture({}, true)
+    if (boundary === 'account') { const fn = bad.stripe.v2.core.accounts.retrieve; bad.stripe.v2.core.accounts.retrieve = async () => ({ ...await fn(), livemode: false }) }
+    if (boundary === 'payment') { const fn = bad.stripe.invoicePayments.list; bad.stripe.invoicePayments.list = async () => { const result = await fn(); result.data[0].livemode = false; return result } }
+    if (boundary === 'intent') { const fn = bad.stripe.paymentIntents.retrieve; bad.stripe.paymentIntents.retrieve = async () => ({ ...await fn(), livemode: false }) }
+    if (boundary === 'charge') bad.charge.livemode = false
+    if (boundary === 'transfer') { const fn = bad.stripe.transfers.create; bad.stripe.transfers.create = async (...args) => ({ ...await fn(...args), livemode: false }) }
+    await assert.rejects(() => sendWedeaShare(bad.db, bad.stripe, bad.env, 'in_test'))
+    assert.notEqual(bad.share.status, 'sent')
+    assert.ok(!bad.calls.some(c => c.name === 'rk_wedea_complete'))
+  }
 })

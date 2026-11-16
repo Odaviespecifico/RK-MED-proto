@@ -7,7 +7,7 @@ import { readEnvironment } from './scripts/env/files.mjs'
 
 export default defineConfig(({ mode }) => {
   // Read exactly one file; never merge .env.local or expose server variables.
-  const values = readEnvironment(['prod', 'production'].includes(mode) ? 'prod' : 'test')
+  const values = readEnvironment(['prod', 'production'].includes(mode) ? 'prod' : mode === 'stage' ? 'stage' : 'test')
   const { env: publicEnv, config } = publicBuildEnvironment(values, mode)
   return {
   envDir: false,
@@ -20,9 +20,9 @@ export default defineConfig(({ mode }) => {
       registerType: 'prompt',
       includeAssets: ['icons/*'],
       manifest: {
-        name: config.mode === 'demo' ? 'RKMED Linha Gold — Protótipo' : 'RKMED Linha Gold — Testes',
+        name: config.environment === 'production' ? 'RKMED Linha Gold' : config.mode === 'demo' ? 'RKMED Linha Gold — Protótipo' : 'RKMED Linha Gold — Testes',
         short_name: 'RKMED',
-        description: 'Clube de benefícios RKMED — ambiente de testes',
+        description: config.environment === 'production' ? 'Clube de benefícios RKMED' : 'Clube de benefícios RKMED — ambiente de testes',
         theme_color: '#161d1b',
         background_color: '#f7f6f2',
         display: 'standalone',
@@ -33,7 +33,7 @@ export default defineConfig(({ mode }) => {
         ],
       },
       workbox: {
-        cacheId: config.mode === 'demo' ? 'rkmed-demo' : 'rkmed-sandbox',
+        cacheId: config.environment === 'production' ? 'rkmed-production' : config.mode === 'demo' ? 'rkmed-demo' : 'rkmed-sandbox',
         globPatterns: ['**/*.{js,css,html,svg,png,webmanifest}'],
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api\//],

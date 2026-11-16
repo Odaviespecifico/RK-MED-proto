@@ -1,3 +1,5 @@
+import { BarChart3 } from 'lucide-react'
+import { EmptyState } from '../../components/EmptyState'
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import type { Portal } from '../../integrations/portal'
@@ -69,7 +71,7 @@ export function ConnectedReports({ api, viewer, online }: { api: Portal; viewer:
         <div className="dash-row"><dt>Economia válida</dt><dd>{reportMoney(report.totals.discountCents)}</dd></div>
         <div className="dash-row"><dt>Valor final válido</dt><dd>{reportMoney(report.totals.finalCents)}</dd></div>
       </dl>
-      {report.totals.recordedCount === 0 && <p>Nenhuma compra neste período.</p>}
+      {report.totals.recordedCount === 0 && <EmptyState icon={BarChart3} title="Nenhuma compra no período" description="Escolha outras datas ou outro parceiro para consultar os registros." />}
       {!viewer && <Button variant="outline" disabled={busy || !online} onClick={() => setConfirm(true)}>Exportar CSV</Button>}
     </>}
     {confirm && report && <div role="region" aria-label="Confirmar exportação">
