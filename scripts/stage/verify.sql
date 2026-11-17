@@ -1,0 +1,21 @@
+-- Read-only verification of the stage namespace; no personal values returned.
+select
+ (select count(*) from auth.users where raw_app_meta_data->>'rkmed_fixture'='stage-fixtures-v1') as fixture_users,
+ (select count(*) from auth.users where coalesce(raw_app_meta_data->>'rkmed_fixture','')<>'stage-fixtures-v1') as preserved_users,
+ (select count(*) from private.partners where id::text like 'f17e0002-%') as partners,
+ (select count(*) from private.employees where id::text like 'f17e0003-%') as employees,
+ (select count(*) from private.members where id::text like 'f17e0001-%') as members,
+ (select count(*) from private.members where id::text like 'f17e0001-%' and blocked) as blocked,
+ (select jsonb_object_agg(state,n) from (select state,count(*) n from private.subscriptions where member_id::text like 'f17e0001-%' group by state) s) as subscription_states,
+ (select count(*) from private.purchases where id::text like 'f17e0005-%') as purchases,
+ (select count(*) from private.reversals where id::text like 'f17e0009-%') as reversals,
+ (select count(*) from private.support_requests where id::text like 'f17e0007-%') as support,
+ (select count(*) from private.notification_outbox where id::text like 'f17e0008-%') as messages,
+ (select count(*) from private.webhook_events where event_id like 'evt_StageFixture%') as events,
+ (select count(*) from private.wedea_shares where invoice_id like 'in_StageShareFixture%') as shares,
+ (select count(*) from private.purchases where id::text like 'f17e0005-%' and (final_cents+discount_cents<>gross_cents or discount_cents<>floor((gross_cents*discount_bps+5000)::numeric/10000)::bigint)) as invalid_totals,
+ (select count(*) from private.partners where id::text like 'f17e0002-%' and not private.valid_partner_cnpj(cnpj)) as invalid_cnpj,
+ (select count(*) from private.subscriptions where member_id::text like 'f17e0001-%' and customer_id is not null) as live_provider_customers,
+ (select count(*) from private.notification_outbox where id::text like 'f17e0008-%' and status in ('pending','failed') and attempts<5 and next_attempt<=now()) as deliverable_fixture_messages,
+ (select count(*) from private.webhook_events where event_id like 'evt_StageFixture%' and status<>'processed' and attempts<10) as retryable_fixture_events,
+ (select count(*) from private.wedea_shares where invoice_id like 'in_StageShareFixture%' and status in ('pending','sending')) as payable_fixture_shares;

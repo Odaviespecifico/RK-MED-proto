@@ -85,3 +85,11 @@ test('RF-PAG: late invoice.paid cannot undo a newer unpaid invoice', async () =>
   await processEvent(db, stripe, { STRIPE_PRICE_ID: 'price_test' }, event('evt_old_paid', 'invoice.paid'))
   assert.deepEqual(states, ['active', 'past_due', 'past_due'])
 })
+
+test('RF-PAG: incomplete contact verification cannot allocate Checkout or call Stripe', async () => {
+  let writes = 0
+  const db = { rpc: async name => { assert.equal(name, 'rk_backend_member'); return { data: { verified: false, consented: true, photoPath: 'fixture.jpg' }, error: null } } }
+  const stripe = new Proxy({}, { get() { writes++; throw Error('Stripe must not be called') } })
+  await assert.rejects(() => checkout(db, stripe, { APP_ENV: 'local' }, 'fixture', 'operation'), /Conclua contatos/)
+  assert.equal(writes, 0)
+})

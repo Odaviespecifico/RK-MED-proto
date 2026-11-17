@@ -5,10 +5,9 @@ const context = await browser.newContext({ viewport: { width: 390, height: 844 }
 const page = await context.newPage()
 try {
   await page.goto(`${process.env.RKMED_TEST_URL ?? 'http://127.0.0.1:4173'}/entrar`)
-  await page.getByRole('button', { name: 'Login com email' }).click()
   await page.getByPlaceholder('ana@exemplo.com').fill('ana@exemplo.com')
-  await page.getByRole('button', { name: 'Continuar' }).click()
-  await page.getByPlaceholder('••••••').fill('123456')
+  await page.getByRole('button', { name: 'Receber código por e-mail' }).click()
+  await page.getByPlaceholder('000000').fill('123456')
   await page.getByRole('button', { name: 'Acessar meu cartão' }).click()
   await page.getByRole('img', { name: 'QR do cartão do associado' }).waitFor()
   await page.evaluate(() => navigator.serviceWorker.ready)

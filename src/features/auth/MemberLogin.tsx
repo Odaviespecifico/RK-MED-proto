@@ -1,76 +1,66 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
-import { ArrowLeft, ArrowRight, Smartphone, Mail, CheckCircle2, CircleAlert } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CheckCircle2, CircleAlert } from 'lucide-react'
 import { Button } from '../../components/ui/button'
-import { Brand, Eyebrow } from '../../components/identity'
+import { Brand } from '../../components/identity'
 import { onlyDigits } from '../../lib/format'
+import { maskedContact } from '../../lib/member-experience'
 import type { MemberAuth } from '../../integrations/contracts'
+import './member-experience.css'
 
-export function MemberLogin({ auth, onAuthenticated, go, online, demo = false, demoHint, emailPlaceholder = 'seu@email.com' }: { auth: MemberAuth; onAuthenticated: (userId: string) => void; go: (p: string) => void; online: boolean; demo?: boolean; demoHint?: ReactNode; emailPlaceholder?: string }) {
-  const [cooldown, setCooldown] = useState(0)
-  useEffect(() => { if (cooldown <= 0) return; const timer = setTimeout(() => setCooldown(cooldown - 1), 1000); return () => clearTimeout(timer) }, [cooldown])
+export function MemberLogin({ auth, onAuthenticated, go, online, demo = false, demoHint, emailPlaceholder = 'seu@email.com' }: { auth: MemberAuth; onAuthenticated: (userId: string) => void | Promise<void>; go: (p: string) => void; online: boolean; demo?: boolean; demoHint?: ReactNode; emailPlaceholder?: string }) {
+  const [retryAt, setRetryAt] = useState(0)
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer) }, [])
+  const cooldown = Math.max(0, Math.ceil((retryAt - now) / 1000))
   const [busy, setBusy] = useState(false)
-  const [mode, setMode] = useState<'sms' | 'email'>('sms')
-  const [step, setStep] = useState<'choice' | 'contact' | 'otp'>('choice')
-  const [contact, setContact] = useState('')
+  const working = useRef(false)
+  const [mode, setMode] = useState<'sms' | 'email'>('email')
+  const [step, setStep] = useState<'contact' | 'otp'>('contact')
+  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
+  const contact = mode === 'email' ? email : phone
   const [otp, setOtp] = useState('')
   const [error, setError] = useState('')
-  const [sentBy, setSentBy] = useState<'sms' | 'email'>('sms')
   const [notice, setNotice] = useState('')
   const cardRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const heading = cardRef.current?.querySelector('h2')
-    if (heading) { heading.tabIndex = -1; heading.focus() }
-  }, [step])
-  function choose(next: 'sms' | 'email') {
-    setMode(next); setContact(''); setOtp(''); setError(''); setNotice(''); setStep('contact')
-  }
-  async function send(e: FormEvent) {
-    e.preventDefault()
-    if (!online) return setError('Conecte-se à internet para receber o código.')
-    if (mode === 'sms' && onlyDigits(contact).length < 10) return setError('Informe um celular com DDD.')
-    setBusy(true); setError(''); setNotice('')
+  useEffect(() => { const heading = cardRef.current?.querySelector('h2'); if (heading) { heading.tabIndex = -1; heading.focus() } }, [step, mode])
+  function choose(next: 'sms' | 'email') { setMode(next); setOtp(''); setError(''); setNotice(''); setStep('contact') }
+  async function send(event?: FormEvent) {
+    event?.preventDefault()
+    if (!online || working.current || cooldown > 0) return
+    working.current = true; setBusy(true); setError(''); setNotice('')
+    setRetryAt(Date.now() + (demo ? 0 : 60000))
     try {
       await auth.requestCode({ contact, channel: mode })
-      setCooldown(demo ? 0 : 60); setOtp(''); setSentBy(mode); setStep('otp')
-    } catch (error) { setError(error instanceof Error ? error.message : 'Não foi possível solicitar o código.') }
-    finally { setBusy(false) }
+      setOtp(''); setStep('otp'); setNotice('Código solicitado. Confira também a pasta de spam se usar e-mail.')
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Não foi possível enviar o código. Aguarde antes de tentar novamente.') }
+    finally { working.current = false; setBusy(false) }
   }
-  async function resend() {
-    if (!online) return setError('Conecte-se à internet para solicitar outro código.')
-    if (busy || cooldown > 0) return
-    const channel = mode
-    setBusy(true); setError('')
-    try {
-      await auth.requestCode({ contact, channel })
-      setCooldown(demo ? 0 : 60)
-      setSentBy(channel)
-      setOtp('')
-      setNotice(`Novo código enviado por ${channel === 'sms' ? 'SMS' : 'e-mail'}.`)
-    } catch (error) { setError(error instanceof Error ? error.message : 'Não foi possível reenviar o código.') }
-    finally { setBusy(false) }
+  async function verify(event: FormEvent) {
+    event.preventDefault(); if (!online || working.current) return
+    working.current = true; setBusy(true); setError('')
+    try { const result = await auth.verifyCode({ contact, channel: mode, token: otp }); await onAuthenticated(result.userId) }
+    catch (cause) { setError(cause instanceof Error ? cause.message : 'Código incorreto ou expirado. Confira ou solicite outro código.') }
+    finally { working.current = false; setBusy(false) }
   }
-  async function verify(e: FormEvent) {
-    e.preventDefault(); setBusy(true); setError('')
-    try {
-      const result = await auth.verifyCode({ contact, channel: sentBy, token: otp })
-      onAuthenticated(result.userId)
-    } catch (error) { setError(error instanceof Error ? error.message : 'Não foi possível confirmar o código.') }
-    finally { setBusy(false) }
-  }
-  return <div className="auth-layout">
-    <div className="auth-aside"><button className="brand-button" onClick={() => go('/')}><Brand dark /></button><div><Eyebrow>SEU ESPAÇO DE CUIDADO</Eyebrow><h1>Acesse seu<br /><em>cartão digital.</em></h1><p>Entre com SMS ou e-mail para consultar seus descontos e mostrar o QR.</p></div><div className="auth-art-card"><span>✳ RKMED</span><b>Seu cartão.<br />Seus descontos.</b><small>LINHA GOLD</small></div></div>
+  return <div className="auth-layout member-login">
+    <aside className="auth-aside"><button className="brand-button" onClick={() => go('/')} aria-label="RKMED — início"><Brand dark /></button><div><h1>Seu cartão,<br /><em>sempre com você.</em></h1><p>Acesse sua conta com um código enviado ao contato já verificado.</p></div></aside>
     <main className="auth-main"><div className="auth-card" ref={cardRef}>
-      <span className="auth-topline">ÁREA DO ASSOCIADO <span>{step === 'choice' ? '01' : step === 'contact' ? '02' : '03'} / 03</span></span>
-      <div className="login-progress" aria-label={`Passo ${step === 'choice' ? 1 : step === 'contact' ? 2 : 3} de 3`}><span className="current" /><span className={step !== 'choice' ? 'current' : ''} /><span className={step === 'otp' ? 'current' : ''} /></div>
-      {step === 'choice' && <><h2>Como prefere entrar?</h2><p>Escolha onde quer receber o código de acesso.</p><div className="login-choice"><button type="button" onClick={() => choose('sms')}><Smartphone size={21} /><span><b>Login com SMS</b><small>Receba um código no seu celular</small></span><ArrowRight size={18} /></button><button type="button" onClick={() => choose('email')}><Mail size={21} /><span><b>Login com email</b><small>Receba um código no seu e-mail</small></span><ArrowRight size={18} /></button></div></>}
-      {step === 'contact' && <><button type="button" className="back-link" onClick={() => { setError(''); setNotice(''); setStep('choice') }}><ArrowLeft size={15} /> Escolher outro meio</button><h2>{mode === 'email' ? 'Seu e-mail' : 'Seu SMS'}</h2><p>{mode === 'email' ? 'Digite o e-mail verificado no cadastro.' : 'Digite o número verificado no cadastro, com DDD.'}</p><form onSubmit={send}><label className="field-label">{mode === 'email' ? 'E-mail' : 'SMS'}<input className="input" type={mode === 'email' ? 'email' : 'tel'} inputMode={mode === 'email' ? 'email' : 'tel'} autoComplete={mode === 'email' ? 'email' : 'tel'} required placeholder={mode === 'email' ? emailPlaceholder : '(81) 99999-0001'} value={contact} onChange={e => { setContact(e.target.value); setError('') }} /></label><p className="helper">{mode === 'sms' ? 'Enviaremos um código temporário pelo SMS.' : 'Enviaremos um código temporário para este e-mail.'}</p><Button type="submit" disabled={!online || busy} className="full">Continuar <ArrowRight size={18} /></Button></form></>}
-      {step === 'otp' && <><button type="button" className="back-link" onClick={() => { setOtp(''); setError(''); setNotice(''); setStep('contact') }}><ArrowLeft size={15} /> Alterar contato</button><h2>Confirme seu acesso</h2><p>Código enviado para <strong>{contact}</strong> por {sentBy === 'email' ? 'e-mail' : 'SMS'}.</p><form onSubmit={verify}><label className="field-label">Código recebido por {sentBy === 'email' ? 'e-mail' : 'SMS'}<input className="input otp-input" inputMode="numeric" autoComplete="one-time-code" maxLength={6} required placeholder="••••••" value={otp} onChange={e => { setOtp(onlyDigits(e.target.value)); setError('') }} /></label><Button type="submit" disabled={!online || busy} className="full">Acessar meu cartão <ArrowRight size={18} /></Button><button type="button" className="text-link" disabled={!online || busy || cooldown > 0} onClick={resend}>{mode === 'sms' ? 'Não chegou? Reenviar SMS' : 'Não chegou? Reenviar e-mail'}</button></form></>}
+      <div className="enrollment-mobile-brand"><button className="brand-button" onClick={() => go('/')}><Brand /></button></div>
+      <span className="auth-topline">ÁREA DO ASSOCIADO <span>{step === 'contact' ? '1 · Contato' : '2 · Código'}</span></span>
+      {step === 'contact' ? <><h2>{mode === 'email' ? 'Entre com seu e-mail' : 'Entre pelo SMS'}</h2><p>{mode === 'email' ? 'Enviaremos um código de acesso. Você não precisa de senha.' : 'Use o celular já verificado no cadastro. Esta opção não altera o telefone da conta.'}</p>
+        <form onSubmit={event => void send(event)}><label className="field-label">{mode === 'email' ? 'E-mail' : 'Celular com DDD'}<input className="input" type={mode === 'email' ? 'email' : 'tel'} autoComplete={mode === 'email' ? 'email' : 'tel'} required placeholder={mode === 'email' ? emailPlaceholder : '(81) 99999-0001'} value={contact} disabled={busy} onChange={event => { mode === 'email' ? setEmail(event.target.value) : setPhone(event.target.value); setError('') }} /></label><Button type="submit" disabled={!online || busy || cooldown > 0} className="full">{busy ? 'Enviando código…' : mode === 'email' ? 'Receber código por e-mail' : 'Receber código por SMS'} <ArrowRight size={18} /></Button></form>
+        <button type="button" className="text-link auth-alternative" disabled={busy} onClick={() => choose(mode === 'email' ? 'sms' : 'email')}>{mode === 'email' ? 'Não consigo acessar meu e-mail' : 'Voltar ao acesso por e-mail'}</button>
+      </> : <><button type="button" className="back-link" disabled={busy} onClick={() => { setOtp(''); setError(''); setNotice(''); setStep('contact') }}><ArrowLeft size={15} /> Corrigir {mode === 'email' ? 'e-mail' : 'celular'}</button><h2>Confirme seu acesso</h2><p>Código enviado para <strong>{maskedContact(contact, mode)}</strong> por {mode === 'email' ? 'e-mail' : 'SMS'}. Válido por 5 minutos.</p>
+        <form onSubmit={event => void verify(event)}><label className="field-label">Código recebido por {mode === 'email' ? 'e-mail' : 'SMS'}<input className="input otp-input" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" minLength={6} maxLength={6} required placeholder="000000" value={otp} disabled={busy} onChange={event => { setOtp(onlyDigits(event.target.value).slice(0, 6)); setError('') }} /></label><Button type="submit" disabled={!online || busy} className="full">{busy ? 'Verificando…' : 'Acessar meu cartão'} <ArrowRight size={18} /></Button><button type="button" className="text-link" disabled={!online || busy || cooldown > 0} onClick={() => void send()}>Reenviar código</button></form>
+      </>}
+      {cooldown > 0 && <p className="auth-countdown" role="status">Novo código disponível em {cooldown}s.</p>}
+      {!online && <p role="status">Conecte-se à internet para entrar.</p>}
       {notice && <div className="inline-success" role="status"><CheckCircle2 size={16} />{notice}</div>}
       {error && <div className="inline-error" role="alert"><CircleAlert size={16} />{error}</div>}
       {demoHint}
-      <p className="auth-foot"><button type="button" onClick={() => go('/esqueci-senha')}>Esqueci minha senha</button></p><p className="auth-foot">Ainda não faz parte? <button onClick={() => go('/cadastro')}>Comece aqui <ArrowRight size={14} /></button></p>
+      <p className="auth-foot">Ainda não faz parte? <button onClick={() => go('/cadastro')}>Comece aqui <ArrowRight size={14} /></button></p>
     </div></main>
   </div>
 }
-

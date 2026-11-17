@@ -42,7 +42,7 @@ try {
   await page.goto(`${origin}/admin`)
   await page.getByText('Entre para continuar', { exact: true }).waitFor()
   await page.goto(`${origin}/entrar`)
-  await page.getByRole('button', { name: /^Login com SMS/ }).waitFor()
+  await page.getByRole('button', { name: 'Receber código por e-mail' }).waitFor()
   assert.equal(modules.some(url => /DemoApp|mocks/.test(url)), false)
   assert.deepEqual(errors, [])
   await page.route(`${backend}/rest/v1/rpc/rk_partners`, route => route.abort())

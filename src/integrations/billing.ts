@@ -12,6 +12,10 @@ export function createBilling(client: SupabaseClient, environment = 'local') {
       if (authError || !session.session) throw new IntegrationError('Entre antes de abrir o pagamento.')
       const { data, error } = await client.functions.invoke('rkmed-api', { body: { action: 'checkout', operationId } })
       if (error || !data || data.livemode !== live || typeof data.url !== 'string') {
+        let message = data?.error
+        if (error?.context instanceof Response) { try { message = (await error.context.clone().json()).error } catch { /* Keep the generic message. */ } }
+        if (['Checkout expirado. Tente novamente para iniciar uma nova operação.', 'Operação expirada. Atualize a página.'].includes(message)) throw new IntegrationError('A sessão de pagamento expirou. Tente novamente para abrir uma nova sessão.')
+        if (message === 'Pagamento em processamento. Aguarde a confirmação.') throw new IntegrationError(message)
         throw new IntegrationError('O pagamento ainda não está disponível. Nenhum benefício foi ativado.')
       }
       let url: URL

@@ -485,3 +485,25 @@ Reproduzido preflight de `phone-code`: projeto anterior retornava 403 sem CORS p
 Branch local stage já estava no commit 13b77ff35457b0bbcb7033a3e43b843d8b633dc0, igual a main e origin/main após fetch. GitHub não tinha branch remota stage; tentativa de push sem sucesso por falta de autenticação HTTPS. Árvore de trabalho mantida na main, sem incluir alterações locais na stage.
 
 Verificação hospedada: navegador com origem http://127.0.0.1:5175 acessou phone-code e rkmed-api nos dois projetos sem erro CORS, com rejeições esperadas 400/401 a corpos inválidos/sem sessão. Preflight do domínio novo também retornou 200 com origem exata; origem desconhecida retornou 403 sem liberação. Não foram enviados OTPs ou criados cadastros.
+
+## Experiência de autenticação, cadastro e pagamento — 16/11/2026
+
+Plano do anexo `9e7091a3-8983-48e6-81c1-fb9b015ea27d` executado em quatro etapas: apresentação/layout; contatos/login; pagamento; PWA e validação. A decisão mais recente substitui a escolha inicial SMS/e-mail por login direto com e-mail e SMS como alternativa no número já verificado. Cadastro continua exigindo ambos, com dados/foto/aceites existentes. Interfaces e testes descritos em `docs/experiencia-associado.md`.
+
+Implementados introdução mobile em até três telas, benefícios laterais desktop, destinos mascarados, correção de contatos e reenvio/expiração, preço e condições na mesma experiência, retorno do Checkout ao cadastro e estados baseados no backend. Convite PWA é não bloqueante e reaparece em nova visita sem dispensa persistente. Consultado catálogo Stripe de stage em leitura: preço ativo R$69,90 mensal, modo teste. Sem cobranças ou mensagens externas.
+
+Verificações: typecheck, 92 testes Node, build sandbox e 52 verificações pgTAP locais aprovados. Navegador cobre login/cadastro/PWA com serviços/câmera simulados e fluxos de demonstração. Aceite em dispositivos físicos e publicação desta etapa permanecem pendentes; não confundir cenários simulados com entrega/instalação/pagamento reais.
+
+## Ordem do cadastro do associado — 16/11/2026
+
+Ordem solicitada pelo usuário: dados pessoais (nome, CPF, nascimento e aceites), e-mail, confirmação de e-mail, celular, confirmação SMS, foto e pagamento. Dados permanecem na memória ao voltar; gravação de cadastro só ocorre depois dos dois canais confirmados. Falha de gravação permite retomar sem consumir novamente o código SMS. Sessões parcialmente verificadas retomam após preencher dados pessoais; associados já cadastrados mantêm acesso a foto/pagamento. Sem alteração no contrato backend ou persistência de CPF no navegador.
+
+Verificados typecheck, build sandbox e jornada em navegador com dados/serviços sintéticos: ordem das telas, ausência de celular na etapa de e-mail, preservação de dados ao voltar, validação dos contatos e retomada de gravação após SMS confirmado. Documentos aceitos mantêm as versões apresentadas durante o fluxo. Alteração local, sem publicação.
+
+## Dados fictícios para stage — 16/11/2026
+
+Por solicitação explícita, aplicada `stage-fixtures-v1` exclusivamente a `wfgiokooedjalmvqgbub`, após conferência do ambiente sandbox e validação local com rollback. Preservada a conta existente. Criados 240 associados/assinaturas, 60 parceiros, 276 funcionários, 60 acessos internos, 60 contas de parceiros, 3.720 compras, 120 estornos, 400 atendimentos, 330 entregas simuladas, 96 eventos de pagamento, 80 checkouts expirados, 60 operações de cobrança, 40 cenários de repasse e 480 auditorias da carga. Três imagens de fixture preparadas no Storage privado.
+
+Dados identificados como FICTÍCIO STAGE; contatos inválidos para entrega; senhas/códigos aleatórios em `.local/`, ignorados pelo Git. Não foram criados objetos financeiros no Stripe. Clientes de provedor ausentes nas assinaturas, filas fictícias impedidas de processamento automático e nenhum pagamento/envio/transferência disparado. Não foram alterados schema, RLS ou migrations. Detalhes e comandos em `docs/dados-ficticios-stage.md`.
+
+Verificação remota com contas Auth reais de fixture: paginação completa sem duplicações/releitura divergente em associados (10 páginas), cobranças (3), acessos (5), suporte (16), compras gerais (149), histórico do associado 001 (6) e parceiro 001 (8). Confirmados filtros, CPF mascarado, isolamento, foto privada e QR no balcão; sessões de QA encerradas. Contagens, estados, CNPJ e cálculos monetários consistentes; zero itens fictícios elegíveis para execução automática. Reaplicação reconhece o marcador e não duplica dados ou redefine senhas.

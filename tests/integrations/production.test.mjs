@@ -52,7 +52,7 @@ test('Stripe live Checkout validates account, price and result; test/live keys n
   const stripe = { accounts: { retrieve: async () => ({ id: env.STRIPE_ACCOUNT_ID }) }, prices: { retrieve: async () => price },
     checkout: { sessions: { create: async (params, options) => {
       calls++; assert.equal(params.customer, 'cus_production'); assert.equal(params.line_items[0].price, env.STRIPE_PRICE_ID)
-      assert.equal(params.success_url, `${env.APP_ORIGIN}/app/cobranca?checkout=processing`)
+      assert.equal(params.success_url, `${env.APP_ORIGIN}/cadastro/pagamento?checkout=processing`)
       assert.equal(options.idempotencyKey, `${env.STRIPE_ACCOUNT_ID}:${operation}`)
       return { id: 'cs_synthetic', url: 'https://checkout.stripe.com/synthetic', livemode: true }
     } } } }

@@ -136,3 +136,18 @@ test('browser billing fails closed without session/backend or for a non-Stripe r
   client.functions.invoke = async () => ({ data: { livemode: false, url: 'https://evil.example' }, error: null })
   await assert.rejects(() => billing.createCheckout(operation))
 })
+
+test('OTP expiry is actionable and provider internals stay redacted', async t => {
+  let time = 1000, verifyCalls = 0
+  t.mock.method(Date, 'now', () => time)
+  const auth = createMemberAuth({ functions: { invoke: async (_name, { body }) => {
+    if (body.action === 'verify') verifyCalls++
+    return { data: { challengeId: 'a0000000-0000-4000-8000-000000000001' }, error: null }
+  } } })
+  await auth.requestCode({ contact: 'a@example.invalid', channel: 'email' })
+  time += 300001
+  await assert.rejects(() => auth.verifyCode({ contact: 'a@example.invalid', channel: 'email', token: '123456' }), /expirou/)
+  assert.equal(verifyCalls, 0)
+  const denied = createMemberAuth({ functions: { invoke: async () => ({ data: null, error: { context: Response.json({ error: 'Código inválido, expirado ou já utilizado. Solicite outro código.' }) } }) } })
+  await assert.rejects(() => denied.requestCode({ contact: 'a@example.invalid', channel: 'email' }), /Código inválido/)
+})

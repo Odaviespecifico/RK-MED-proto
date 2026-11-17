@@ -46,7 +46,7 @@ export function createStripeProvider(env: Environment, transport?: Pick<Stripe, 
         saved_payment_method_options: { payment_method_save: 'enabled' },
         integration_identifier: 'hosted_mobile_app_0001',
         origin_context: 'mobile_app',
-        success_url: `${origin.origin}/app/cobranca?checkout=processing`, cancel_url: `${origin.origin}/app/cobranca?checkout=canceled`,
+        success_url: `${origin.origin}/cadastro/pagamento?checkout=processing`, cancel_url: `${origin.origin}/cadastro/pagamento?checkout=canceled`,
       }, { idempotencyKey: `${accountId}:${operationId}` })
       if (session.livemode !== live || !session.url) throw new StripeSandboxError('Resposta de Checkout incompatível com o ambiente.')
       return { url: session.url, sessionId: session.id, livemode: live }
