@@ -7,9 +7,10 @@ import type { PageCursor } from '../../lib/pagination'
 import { useCursorPage } from '../../lib/useCursorPage'
 import { PageControls } from '../../components/PageControls'
 import { Button } from '../../components/ui/button'
+import { PartnerCombobox } from '../../components/PartnerCombobox'
 import { shortDate } from '../../lib/format'
 
-const roles: Record<StaffRole, string> = { partner: 'Parceiro', support: 'Suporte RKMED', viewer: 'Diretoria', admin: 'Administrador' }
+const roles: Record<StaffRole, string> = { partner_manager: 'Gerente de parceiro', partner: 'Parceiro (balcão)', support: 'Suporte RKMED', viewer: 'Diretoria', admin: 'Administrador' }
 const auditNames: Record<string, string> = { 'staff.created': 'Acesso criado', 'staff.provision': 'Acesso criado', 'staff.access.update': 'Permissões ou situação alteradas', 'staff.password.requested': 'Redefinição de senha solicitada', 'staff.password.succeeded': 'Senha redefinida', 'staff.password.failed': 'Falha na redefinição de senha' }
 
 export function StaffAccess({ api, actorId, online, revision = 0 }: { api: Portal; actorId: string; online: boolean; revision?: number }) {
@@ -62,7 +63,7 @@ export function StaffAccess({ api, actorId, online, revision = 0 }: { api: Porta
     if (!selected || !confirming) return
     const account = selected
     if (mode === 'edit') {
-      await run(() => api.updateStaff(account, role, role === 'partner' ? partner : null, active, reason.trim()), 'Acesso atualizado. As sessões anteriores perderam acesso ao sistema.')
+      await run(() => api.updateStaff(account, role, (role === 'partner' || role === 'partner_manager') ? partner : null, active, reason.trim()), 'Acesso atualizado. As sessões anteriores perderam acesso ao sistema.')
     } else {
       await run(async () => { await api.command('staff', { staffAction: 'password', operationId: crypto.randomUUID(), userId: account.id, revision: account.revision, reason: reason.trim(), password }) }, 'Senha redefinida. As sessões anteriores perderam acesso ao sistema.')
       // An uncertain provider response requires a fresh account revision and password entry.
@@ -88,7 +89,7 @@ export function StaffAccess({ api, actorId, online, revision = 0 }: { api: Porta
     {selected && <form className="counter-flow staff-access-editor" aria-label={mode === 'edit' ? 'Editar acesso interno' : 'Redefinir senha do acesso'} onSubmit={e => { e.preventDefault(); setConfirming(true) }}>
       <h3>{mode === 'edit' ? 'Editar acesso' : 'Redefinir senha'} · {selected.email}</h3>
       {mode === 'edit' ? <><label className="field-label">Perfil do acesso<select className="input" value={role} disabled={busy} onChange={e => { setRole(e.target.value as StaffRole); setPartner(''); change() }}>{Object.entries(roles).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
-        {role === 'partner' && <label className="field-label">Estabelecimento do acesso<select className="input" value={partner} onChange={e => { setPartner(e.target.value); change() }} required disabled={busy}><option value="">Selecione</option>{partners.map(p => <option key={p.id} value={p.id}>{p.name}{p.active ? '' : ' (inativo)'}</option>)}</select></label>}
+        {(role === 'partner' || role === 'partner_manager') && <label className="field-label" htmlFor="staff-edit-partner">Estabelecimento do acesso<PartnerCombobox id="staff-edit-partner" partners={partners} value={partner} required disabled={busy} onChange={nextPartner => { setPartner(nextPartner); change() }} /></label>}
         <label className="field-label"><span><input type="checkbox" checked={active} disabled={busy} onChange={e => { setActive(e.target.checked); change() }} /> Acesso ativo</span></label></>
         : <label className="field-label">Nova senha<input className="input" type="password" autoComplete="new-password" required minLength={12} maxLength={128} value={password} disabled={busy} onChange={e => { setPassword(e.target.value); change() }} /></label>}
       <label className="field-label">Motivo da alteração<textarea className="input" value={reason} required minLength={3} maxLength={1000} disabled={busy} onChange={e => { setReason(e.target.value); change() }} /></label>

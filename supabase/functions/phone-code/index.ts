@@ -1,5 +1,6 @@
 import { runtimeEnvironment, assertDatabaseEnvironment, deliveryAllowed } from '../_shared/environment.ts'
 import { startMemberSession } from '../_shared/session-bridge.ts'
+import { verifiedSessionId } from '../_shared/staff-access.ts'
 import { requestPasswordRecovery } from '../_shared/password-recovery.ts'
 import { createClient } from '@supabase/supabase-js'
 import { trustedRpc } from '../_shared/backend-rpc.ts'
@@ -22,6 +23,38 @@ Deno.serve(async request => {
       const db = createClient(env.SUPABASE_URL!, env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } })
       await assertDatabaseEnvironment(db, env)
       return response(await requestPasswordRecovery(db, env, body.email), 200, origin)
+    }
+    if (body.action === 'seller_login') {
+      const establishmentCode = typeof body.establishmentCode === 'string' ? body.establishmentCode.trim().toUpperCase() : ''
+      const employeeCode = typeof body.employeeCode === 'string' ? body.employeeCode.trim() : ''
+      if (!/^[A-Z0-9]{10}$/.test(establishmentCode) || !/^[0-9]{4,12}$/.test(employeeCode)) {
+        throw new PublicError('Informe o código do estabelecimento (10 caracteres) e o código do funcionário.')
+      }
+      const db = createClient(env.SUPABASE_URL!, env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } })
+      await assertDatabaseEnvironment(db, env)
+      const verified = await trustedRpc<{ partnerId: string; partnerName: string; employeeId: string; employeeName: string; counterUserId: string | null; counterEmail: string | null }>(
+        db, 'rk_seller_login_verify', { p_establishment_code: establishmentCode, p_employee_code: employeeCode }
+      )
+      let userId = verified.counterUserId
+      let email = verified.counterEmail
+      if (!userId || !email) {
+        const internalEmail = `balcao-${verified.partnerId}@balcao.rkmed.internal`
+        const created = await db.auth.admin.createUser({ email: internalEmail, password: `${crypto.randomUUID()}${crypto.randomUUID()}`, email_confirm: true })
+        if (created.error || !created.data.user) throw new PublicError('Não foi possível iniciar o acesso do balcão. Tente novamente.')
+        userId = created.data.user.id
+        email = internalEmail
+        await trustedRpc(db, 'rk_seller_ensure_counter_role', { p_user_id: userId, p_partner_id: verified.partnerId })
+      }
+      const sessionClient = createClient(env.SUPABASE_URL!, env.SUPABASE_ANON_KEY!, { auth: { persistSession: false, autoRefreshToken: false } })
+      const minted = await startMemberSession(db, sessionClient, { id: userId, email })
+      const sessionId = verifiedSessionId(minted.session.access_token)
+      await trustedRpc(db, 'rk_seller_bind_session', {
+        p_session_id: sessionId,
+        p_user_id: userId,
+        p_partner_id: verified.partnerId,
+        p_employee_id: verified.employeeId,
+      })
+      return response({ userId: minted.userId, session: minted.session, partnerName: verified.partnerName, employeeName: verified.employeeName }, 200, origin)
     }
     if (!['request','verify'].includes(body.action) || !['email','sms'].includes(body.channel) || !['login','signup','attach'].includes(body.purpose)) throw new PublicError('Solicitação inválida.')
     const channel = body.channel as OtpChannel

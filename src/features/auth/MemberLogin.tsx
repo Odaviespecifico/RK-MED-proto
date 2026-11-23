@@ -8,7 +8,8 @@ import { maskedContact } from '../../lib/member-experience'
 import type { MemberAuth } from '../../integrations/contracts'
 import './member-experience.css'
 
-export function MemberLogin({ auth, onAuthenticated, go, online, demo = false, demoHint, emailPlaceholder = 'seu@email.com' }: { auth: MemberAuth; onAuthenticated: (userId: string) => void | Promise<void>; go: (p: string) => void; online: boolean; demo?: boolean; demoHint?: ReactNode; emailPlaceholder?: string }) {
+export function MemberLogin({ auth, onAuthenticated, go, online, demo = false, demoHint, emailPlaceholder = 'seu@email.com', sellerLogin }: { auth: MemberAuth; onAuthenticated: (userId: string) => void | Promise<void>; go: (p: string) => void; online: boolean; demo?: boolean; demoHint?: ReactNode; emailPlaceholder?: string; sellerLogin?: ReactNode }) {
+  const [loginTab, setLoginTab] = useState<'member' | 'seller'>('member')
   const [retryAt, setRetryAt] = useState(0)
   const [now, setNow] = useState(Date.now())
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer) }, [])
@@ -48,6 +49,11 @@ export function MemberLogin({ auth, onAuthenticated, go, online, demo = false, d
     <aside className="auth-aside"><button className="brand-button" onClick={() => go('/')} aria-label="RKMED — início"><Brand dark /></button><div><h1>Seu cartão,<br /><em>sempre com você.</em></h1><p>Acesse sua conta com um código enviado ao contato já verificado.</p></div></aside>
     <main className="auth-main"><div className="auth-card" ref={cardRef}>
       <div className="enrollment-mobile-brand"><button className="brand-button" onClick={() => go('/')}><Brand /></button></div>
+      {sellerLogin && <div className="login-mode-tabs" role="tablist" aria-label="Tipo de acesso">
+        <button type="button" role="tab" aria-selected={loginTab === 'member'} className={loginTab === 'member' ? 'selected' : ''} onClick={() => setLoginTab('member')}>Associado</button>
+        <button type="button" role="tab" aria-selected={loginTab === 'seller'} className={loginTab === 'seller' ? 'selected' : ''} onClick={() => setLoginTab('seller')}>Login vendedor</button>
+      </div>}
+      {sellerLogin && loginTab === 'seller' ? sellerLogin : <>
       <span className="auth-topline">ÁREA DO ASSOCIADO <span>{step === 'contact' ? '1 · Contato' : '2 · Código'}</span></span>
       {step === 'contact' ? <><h2>{mode === 'email' ? 'Entre com seu e-mail' : 'Entre pelo SMS'}</h2><p>{mode === 'email' ? 'Enviaremos um código de acesso. Você não precisa de senha.' : 'Use o celular já verificado no cadastro. Esta opção não altera o telefone da conta.'}</p>
         <form onSubmit={event => void send(event)}><label className="field-label">{mode === 'email' ? 'E-mail' : 'Celular com DDD'}<input className="input" type={mode === 'email' ? 'email' : 'tel'} autoComplete={mode === 'email' ? 'email' : 'tel'} required placeholder={mode === 'email' ? emailPlaceholder : '(81) 99999-0001'} value={contact} disabled={busy} onChange={event => { mode === 'email' ? setEmail(event.target.value) : setPhone(event.target.value); setError('') }} /></label><Button type="submit" disabled={!online || busy || cooldown > 0} className="full">{busy ? 'Enviando código…' : mode === 'email' ? 'Receber código por e-mail' : 'Receber código por SMS'} <ArrowRight size={18} /></Button></form>
@@ -61,6 +67,7 @@ export function MemberLogin({ auth, onAuthenticated, go, online, demo = false, d
       {error && <div className="inline-error" role="alert"><CircleAlert size={16} />{error}</div>}
       {demoHint}
       <p className="auth-foot">Ainda não faz parte? <button onClick={() => go('/cadastro')}>Comece aqui <ArrowRight size={14} /></button></p>
+      </>}
     </div></main>
   </div>
 }

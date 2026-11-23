@@ -24,10 +24,11 @@ export async function manageStaff(db: SupabaseClient, actor: string, session: st
   if (!uuid.test(operation)) throw new PublicError('Operação inválida.')
   await rpc('rk_backend_staff_authorize', { p_actor: actor, p_session: session })
   if (action === 'create') {
-    if (!['admin', 'support', 'viewer', 'partner'].includes(String(body.role)) || typeof body.email !== 'string'
+    if (!['admin', 'support', 'viewer', 'partner', 'partner_manager'].includes(String(body.role)) || typeof body.email !== 'string'
       || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email.trim())) throw new PublicError('Informe e-mail e perfil válidos.')
-    const partner = body.role === 'partner' ? body.partnerId : null
-    if (body.role === 'partner' && (typeof partner !== 'string' || !uuid.test(partner))) throw new PublicError('Selecione o estabelecimento do parceiro.')
+    const needsPartner = body.role === 'partner' || body.role === 'partner_manager'
+    const partner = needsPartner ? body.partnerId : null
+    if (needsPartner && (typeof partner !== 'string' || !uuid.test(partner))) throw new PublicError('Selecione o estabelecimento do parceiro.')
     const created = await db.auth.admin.createUser({ email: body.email.trim().toLowerCase(), password: body.password, email_confirm: true })
     if (created.error || !created.data.user) throw new PublicError('Não foi possível criar o acesso. Verifique se o e-mail já está cadastrado.')
     try {

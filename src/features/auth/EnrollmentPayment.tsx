@@ -30,13 +30,18 @@ export function EnrollmentPayment({ client, api, context, refresh, online, go }:
     const update = async () => {
       if (running) return
       running = true
-      try { const current = await api.context(); if (active) { setMember(current.member); setError('') } }
+      try {
+        const current = await api.context()
+        if (!active) return
+        setMember(current.member); setError('')
+        if (current.member?.eligible) { await refresh(); if (active) go('/app') }
+      }
       catch { if (active) setError('Ainda não foi possível consultar a confirmação. Atualize o status em instantes.') }
       finally { running = false }
     }
     void update(); const timer = window.setInterval(() => void update(), 5000)
     return () => { active = false; clearInterval(timer) }
-  }, [api, online, returned, processing, member?.eligible])
+  }, [api, online, returned, processing, member?.eligible, refresh, go])
   async function openArea() {
     if (working.current || !online) return
     working.current = true; setChecking(true)
