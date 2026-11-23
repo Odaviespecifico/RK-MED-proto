@@ -66,7 +66,7 @@ export function ConnectedBilling({ api, online, viewer, go, revision }: { api: P
       <div className="admin-stat">
         <span className="stat-top"><span>LÍQUIDO RKMED ({data.months}M)</span><Landmark size={19} /></span>
         <strong>{reportMoney(data.netRkmedCents)}</strong>
-        <small>Antes de tarifas Stripe · repasse Wedea {reportMoney(data.wedeaShareCents)}</small>
+        <small>Antes de tarifas Stripe · taxas operacionais {reportMoney(data.wedeaShareCents)}</small>
       </div>
       <div className="admin-stat alert-stat">
         <span className="stat-top"><span>EM ABERTO (INADIMPLÊNCIA)</span><CircleAlert size={19} /></span>
@@ -80,11 +80,11 @@ export function ConnectedBilling({ api, online, viewer, go, revision }: { api: P
         <div className="small-section-head">
           <div>
             <h2 id="billing-monthly-title">Evolução mensal do faturamento</h2>
-            <p className="billing-subtitle">Receita confirmada via Stripe por mês (horário de Recife), separando líquido RKMED e repasse Wedea.</p>
+            <p className="billing-subtitle">Receita confirmada via Stripe por mês (horário de Recife), separando líquido RKMED e taxas operacionais.</p>
           </div>
           <div className="billing-legend" aria-hidden="true">
             <span><i className="legend-dot legend-net" /> Líquido RKMED</span>
-            <span><i className="legend-dot legend-wedea" /> Repasse Wedea</span>
+            <span><i className="legend-dot legend-wedea" /> Taxas operacionais</span>
           </div>
         </div>
         {hasRevenue ? <>
@@ -102,7 +102,7 @@ export function ConnectedBilling({ api, online, viewer, go, revision }: { api: P
             <strong>{activeBar.label}</strong>
             <span>Bruto: <b>{reportMoney(activeBar.grossCents)}</b></span>
             <span>Líquido RKMED: <b>{reportMoney(activeBar.netCents)}</b></span>
-            <span>Wedea: <b>{reportMoney(activeBar.wedeaCents)}</b></span>
+            <span>Taxas operacionais: <b>{reportMoney(activeBar.wedeaCents)}</b></span>
             <span>Faturas pagas: <b>{activeBar.invoices}</b></span>
           </div>}
         </> : <EmptyState icon={CreditCard} title="Sem faturas pagas no período" description="Assim que os primeiros pagamentos de mensalidade forem confirmados pela Stripe, a evolução mensal aparecerá aqui." />}
@@ -141,24 +141,24 @@ export function ConnectedBilling({ api, online, viewer, go, revision }: { api: P
     <div className="billing-bottom-grid">
       <section className="surface-card counter-flow" aria-labelledby="billing-wedea-title">
         <div className="small-section-head">
-          <h2 id="billing-wedea-title">Repasse Wedea (Stripe Connect)</h2>
-          <span className={`status-badge ${wedea.eligible ? 'status-active' : 'status-blocked'}`}><span className="status-dot" />{wedea.eligible ? 'Repasse ativo' : 'Abaixo de 201 ativos'}</span>
+          <h2 id="billing-wedea-title">Taxas operacionais</h2>
+          <span className={`status-badge ${wedea.eligible ? 'status-active' : 'status-blocked'}`}><span className="status-dot" />{wedea.eligible ? 'Taxa ativa' : 'Abaixo de 201 ativos'}</span>
         </div>
-        <p className="billing-subtitle">Regra vigente: repasse fixo de {reportMoney(String(data.wedeaShareUnitCents))} por fatura paga somente quando houver mais de {data.wedeaThreshold} pagantes ativos. Reembolsos e tarifas ficam com a RKMED.</p>
+        <p className="billing-subtitle">Regra vigente: taxa operacional fixa de {reportMoney(String(data.wedeaShareUnitCents))} por fatura paga somente quando houver mais de {data.wedeaThreshold} pagantes ativos. Reembolsos e tarifas ficam com a RKMED.</p>
         <div className="billing-progress-block">
           <div className="billing-progress-head">
             <span>Base pagante ativa: <b>{wedea.active} / {wedea.target}</b></span>
             <small>{wedea.eligible ? 'Faixa atingida' : `Faltam ${wedea.remaining} para ativar`}</small>
           </div>
-          <div className="billing-progress-track" role="progressbar" aria-valuenow={wedea.active} aria-valuemin={0} aria-valuemax={wedea.target} aria-label="Progresso para ativação do repasse Wedea">
+          <div className="billing-progress-track" role="progressbar" aria-valuenow={wedea.active} aria-valuemin={0} aria-valuemax={wedea.target} aria-label="Progresso para ativação das taxas operacionais">
             <span style={{ width: `${wedea.percent}%` }} />
           </div>
         </div>
         <dl className="billing-wedea-summary">
-          <div className="dash-row"><dt>Repasses enviados ({data.months}M)</dt><dd>{data.wedea.sentCount} · {reportMoney(data.wedea.sentCents)}</dd></div>
-          <div className="dash-row"><dt>Repasses pendentes</dt><dd>{data.wedea.pendingCount} · {reportMoney(data.wedea.pendingCents)}</dd></div>
+          <div className="dash-row"><dt>Taxas processadas ({data.months}M)</dt><dd>{data.wedea.sentCount} · {reportMoney(data.wedea.sentCents)}</dd></div>
+          <div className="dash-row"><dt>Taxas pendentes</dt><dd>{data.wedea.pendingCount} · {reportMoney(data.wedea.pendingCents)}</dd></div>
           <div className="dash-row"><dt>Em revisão operacional</dt><dd>{data.wedea.reviewCount} · {reportMoney(data.wedea.reviewCents)}</dd></div>
-          <div className="dash-row"><dt>Faturas sem repasse (≤ 200)</dt><dd>{data.wedea.skippedCount}</dd></div>
+          <div className="dash-row"><dt>Faturas isentas (≤ 200)</dt><dd>{data.wedea.skippedCount}</dd></div>
         </dl>
       </section>
 
@@ -175,7 +175,7 @@ export function ConnectedBilling({ api, online, viewer, go, revision }: { api: P
             </span>
             <span className="billing-invoice-amounts">
               <strong>{reportMoney(item.paidAmountCents)}</strong>
-              {item.wedeaAmountCents !== '0' && <small>Wedea {reportMoney(item.wedeaAmountCents)}</small>}
+              {item.wedeaAmountCents !== '0' && <small>Taxa operacional {reportMoney(item.wedeaAmountCents)}</small>}
             </span>
           </div>)}
         </div> : <EmptyState icon={ReceiptText} title="Nenhuma fatura paga registrada" description="As faturas conciliadas pela Stripe aparecerão aqui em ordem mais recente." />}

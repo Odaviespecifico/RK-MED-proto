@@ -38,6 +38,6 @@ test('wedeaProgress enforces the >200 active paying members threshold (D27)', ()
   assert.equal(above.remaining, 0)
   assert.equal(above.percent, 100)
 
-  assert.equal(wedeaStatusLabel('sent'), 'Repasse enviado')
-  assert.equal(wedeaStatusLabel('skipped'), 'Abaixo da faixa (≤ 200)')
+  assert.equal(wedeaStatusLabel('sent'), 'Taxa processada')
+  assert.equal(wedeaStatusLabel('skipped'), 'Isenta (≤ 200 ativos)')
 })

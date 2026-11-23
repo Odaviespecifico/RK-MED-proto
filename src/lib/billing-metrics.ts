@@ -97,8 +97,8 @@ export function wedeaProgress(activePayingMembers: number, threshold = 200) {
 }
 
 export function wedeaStatusLabel(status: string) {
-  if (status === 'sent') return 'Repasse enviado'
-  if (status === 'pending' || status === 'sending') return 'Repasse pendente'
+  if (status === 'sent') return 'Taxa processada'
+  if (status === 'pending' || status === 'sending') return 'Taxa pendente'
   if (status === 'review') return 'Em revisão'
-  return 'Abaixo da faixa (≤ 200)'
+  return 'Isenta (≤ 200 ativos)'
 }
