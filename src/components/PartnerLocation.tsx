@@ -27,9 +27,9 @@ export function EmbeddedPartnerMap({ partner }: { partner: Location }) {
   </div>
 }
 
-export function PartnerLocation({ partner }: { partner: Location }) {
+export function PartnerLocation({ partner, onOpenChange }: { partner: Location; onOpenChange?: (open: boolean) => void }) {
   const [open, setOpen] = useState(false)
-  return <details className="partner-location" onToggle={event => setOpen(event.currentTarget.open)}>
+  return <details className="partner-location" onToggle={event => { const next = event.currentTarget.open; setOpen(next); onOpenChange?.(next) }}>
     <summary aria-label={`Ver ${partner.name} no mapa`}><MapPin size={16} aria-hidden="true" /> Ver no mapa</summary>
     {open && <div className="partner-location-content"><p>{partner.address}</p><EmbeddedPartnerMap partner={partner} /></div>}
   </details>

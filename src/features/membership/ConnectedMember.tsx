@@ -14,6 +14,7 @@ import { PurchaseTable } from '../partner/PurchaseTable'
 import { PageControls } from '../../components/PageControls'
 import { mergeHistory, savedHistoryPage, type PageCursor } from '../../lib/pagination'
 import { useCursorPage } from '../../lib/useCursorPage'
+import { useClientPage } from '../../lib/useClientPage'
 import { reportMoney } from '../../lib/reports'
 import { MemberInstallPrompt } from '../../components/MemberInstallPrompt'
 import { PartnerMap } from '../../PartnerMap'
@@ -34,6 +35,7 @@ export function ConnectedMember({ api, member, partners, online, refresh, snapsh
   const [supportRevision, setSupportRevision] = useState(0)
   const load = useCallback((cursor: PageCursor | null) => online ? api.purchasesPage(cursor, cursor === null) : Promise.resolve(savedHistoryPage(snapshot?.purchases || [], cursor)), [api, online, snapshot])
   const history = useCursorPage(load, online || !!snapshot)
+  const partnersPage = useClientPage(partners, 6)
   const [error, setError] = useState('')
   useEffect(() => { let current = true; QRCode.toDataURL(member.cardToken, { width: 240, margin: 2 }).then(value => { if (current) setQr(value) }); return () => { current = false } }, [member.cardToken])
   useEffect(() => {
@@ -123,7 +125,7 @@ export function ConnectedMember({ api, member, partners, online, refresh, snapsh
     </>}
     {section === 'parceiros' && <>
       <div className="welcome-row"><div><h1>Parceiros</h1><p>Consulte a rede credenciada, os descontos e os endereços.</p></div></div>
-      <section className="surface-card counter-flow"><div className="small-section-head"><h2>Rede credenciada</h2><small>{partners.length} parceiro(s)</small></div>{partners.length ? partners.map(p => <article className="partner-directory-entry" key={p.id}><div className="dash-row"><span><PartnerLogo partner={p} /><b>{p.name}</b><small>{p.segment} · {p.address}</small>{p.description && <small>{p.description}</small>}</span><strong>{p.discount}%</strong></div><PartnerLocation partner={p} /></article>) : <p className="empty-copy">Nenhum parceiro disponível.</p>}</section>
+      <section className="surface-card counter-flow"><div className="small-section-head"><h2>Rede credenciada</h2><small>{partnersPage.totalPages > 1 ? `${partnersPage.start}–${partnersPage.end} de ${partners.length} parceiro(s)` : `${partners.length} parceiro(s)`}</small></div>{partnersPage.items.length ? partnersPage.items.map(p => <article className="partner-directory-entry" key={p.id}><div className="dash-row"><span><PartnerLogo partner={p} /><b>{p.name}</b><small>{p.segment} · {p.address}</small>{p.description && <small>{p.description}</small>}</span><strong>{p.discount}%</strong></div><PartnerLocation partner={p} /></article>) : <p className="empty-copy">Nenhum parceiro disponível.</p>}{partnersPage.totalPages > 1 && <PageControls label="Páginas da rede credenciada" page={partnersPage} />}</section>
       <PartnerMap partners={partners} />
     </>}
     {section === 'economia' && <>

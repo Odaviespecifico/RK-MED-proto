@@ -20,6 +20,25 @@ export type AdminOverview = {
   recentPurchases: { id: string; memberName: string; partnerName: string; grossCents: number; createdAt: string }[]
   attentionMembers: { id: string; name: string; billingState: string; paidThrough: string | null }[]
 }
+export type AdminBillingOverview = {
+  months: number
+  generatedAt: string
+  priceCents: number
+  wedeaShareUnitCents: number
+  wedeaThreshold: number
+  activePayingMembers: number
+  estimatedMrrCents: string
+  grossRevenueCents: string
+  wedeaShareCents: string
+  netRkmedCents: string
+  pastDueAmountCents: string
+  paidInvoicesCount: number
+  avgInvoiceCents: string
+  statusBreakdown: { active: number; canceling: number; pastDue: number; canceled: number; incomplete: number; blocked: number }
+  wedea: { sentCount: number; pendingCount: number; reviewCount: number; skippedCount: number; sentCents: string; pendingCents: string; reviewCents: string }
+  monthlySeries: { month: string; invoices: number; grossCents: string; wedeaCents: string; netCents: string }[]
+  recentInvoices: { invoiceId: string; memberName: string; paidAmountCents: string; wedeaAmountCents: string; wedeaStatus: string; createdAt: string }[]
+}
 export type MemberEconomy = { savingsCents: string; purchases: number; partners: number }
 export type MemberSubscription = {
   subscription: { status: string; currentPeriodEnd: number | null; cancelAtPeriodEnd: boolean; amount: number | null; currency: string | null; interval: string | null } | null
@@ -49,6 +68,7 @@ export function portal(client: SupabaseClient) {
       return rows.map(row => ({ ...row, photoUrl: row.photoPath ? client.storage.from('partner-photos').getPublicUrl(row.photoPath).data.publicUrl : null }))
     },
     adminOverview: () => rpc<AdminOverview>('rk_admin_overview'),
+    adminBilling: (months = 6) => rpc<AdminBillingOverview>('rk_admin_billing', { p_months: months }),
     supportPage: (cursor: PageCursor | null = null, status = '') => rpc<CursorPage<SupportRequest>>('rk_support_requests', { p_at: cursor?.at || null, p_id: cursor?.id || null, p_status: status }),
     answerSupport: (id: string, response: string) => rpc<void>('rk_answer_support_request', { p_id: id, p_response: response }),
     closeSupport: (id: string) => rpc<void>('rk_close_support_request', { p_id: id }),
