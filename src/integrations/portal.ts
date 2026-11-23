@@ -1,14 +1,15 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { PublicPartner } from './contracts'
 import type { PurchaseExport, PurchaseReport, ReportFilter } from '../lib/reports'
+import type { DataExportPayload, ExportDataset } from '../lib/data-export'
 import { watchOperations, type OperationalSummary, type OperationalConnection } from './operational.ts'
 import type { CursorPage, PageCursor } from '../lib/pagination'
 
 export class PortalConnectionError extends Error {}
 export type PortalMember = { id: string; name: string; cpf: string; photoPath: string | null; cardToken: string; eligible: boolean; blocked: boolean; paidThrough: string | null; billingState: string; cancelAtPeriodEnd: boolean; joinedAt: string; email?: string | null; phone?: string | null }
-export type PortalContext = { userId: string; role: 'pending' | 'member' | 'partner' | 'admin' | 'support' | 'viewer'; partnerId?: string; partner?: PublicPartner & { isTest: boolean }; member?: PortalMember; workSession?: { employeeId: string; employeeName: string; partnerId: string } }
+export type PortalContext = { userId: string; role: 'pending' | 'member' | 'partner' | 'partner_manager' | 'admin' | 'support' | 'viewer'; partnerId?: string; partner?: PublicPartner & { isTest: boolean; active?: boolean; establishmentCode?: string | null; street?: string; number?: string | null; complement?: string | null; neighborhood?: string; postalCode?: string; city?: string; state?: string; cnpj?: string | null; phone?: string | null; email?: string | null }; member?: PortalMember; workSession?: { employeeId: string; employeeName: string; partnerId: string } }
 export type SupportRequest = { id: string; memberId: string; memberName: string; message: string; status: 'open' | 'answered' | 'closed'; response: string | null; createdAt: string; answeredAt: string | null; deliveryStatus: 'pending' | 'failed' | 'sent' | null; deliveryAttempts: number }
-export type StaffRole = 'admin' | 'support' | 'viewer' | 'partner'
+export type StaffRole = 'admin' | 'support' | 'viewer' | 'partner' | 'partner_manager'
 export type StaffAccount = { id: string; email: string; role: StaffRole; active: boolean; partnerId: string | null; partnerName: string | null; isTest: boolean; createdAt: string; lastSignInAt: string | null; revision: number }
 export type StaffAudit = { id: string; action: string; reason: string | null; createdAt: string; actorEmail: string | null }
 export type AdminOverview = {
@@ -47,7 +48,14 @@ export type MemberSubscription = {
 }
 export type PortalPurchase = { id: string; memberId: string; memberName: string; partnerId: string; partnerName: string; employee: string; grossCents: number; discountCents: number; finalCents: number; createdAt: string; reversedAt: string | null }
 export type AdminMember = Pick<PortalMember, 'id' | 'name' | 'cpf' | 'eligible' | 'blocked' | 'billingState' | 'paidThrough' | 'joinedAt'> & { email: string | null; phone: string | null; invoiceId: string | null; amountDue: number | null; savingsCents: string }
-export type PortalEmployee = { id: string; name: string; partnerId: string; active: boolean }
+export type PortalEmployee = { id: string; name: string; partnerId: string; active: boolean; code?: string | null }
+export type PartnerMetrics = {
+  days: number
+  generatedAt: string
+  totals: { validCount: number; reversedCount: number; grossCents: string; discountCents: string; finalCents: string; avgFinalCents: string; uniqueMembers: number }
+  byEmployee: { employeeId: string; employeeName: string; active: boolean; salesCount: number; grossCents: string; discountCents: string; finalCents: string }[]
+  series: { bucket: string; salesCount: number; grossCents: string; discountCents: string; finalCents: string }[]
+}
 export type Validation = { found: boolean; id?: string; name?: string; photoPath?: string; cpf?: string; eligible?: boolean; receipt?: string }
 export type Quote = { grossCents: number; discountBps: number; discountCents: number; finalCents: number }
 
@@ -60,7 +68,13 @@ export function portal(client: SupabaseClient) {
     return data as T
   }
   return {
-    context: () => rpc<PortalContext>('rk_context'),
+    async context() {
+      const ctx = await rpc<PortalContext>('rk_context')
+      if (ctx.partner?.photoPath) {
+        ctx.partner = { ...ctx.partner, photoUrl: client.storage.from('partner-photos').getPublicUrl(ctx.partner.photoPath).data.publicUrl }
+      }
+      return ctx
+    },
     operationalSummary: () => rpc<OperationalSummary>('rk_operational_summary'),
     watchOperations: (changed: () => void, state: (value: OperationalConnection) => void) => watchOperations(client, changed, state),
     async staffPartners() {
@@ -81,6 +95,7 @@ export function portal(client: SupabaseClient) {
     async subscription() { return this.command<MemberSubscription>('subscription') },
     report: (filter: ReportFilter) => rpc<PurchaseReport>('rk_report', { p_from: filter.from, p_to: filter.to, p_partner: filter.partnerId }),
     exportPurchases: (filter: ReportFilter) => rpc<PurchaseExport>('rk_export_purchases', { p_from: filter.from, p_to: filter.to, p_partner: filter.partnerId }),
+    exportData: (dataset: ExportDataset, from: string, to: string) => rpc<DataExportPayload>('rk_export_data', { p_dataset: dataset, p_from: from, p_to: to }),
     async partners() {
       const rows = await rpc<PublicPartner[]>('rk_partners')
       return rows.map(row => ({ ...row, photoUrl: row.photoPath ? client.storage.from('partner-photos').getPublicUrl(row.photoPath).data.publicUrl : null }))
@@ -90,6 +105,9 @@ export function portal(client: SupabaseClient) {
     queue: () => rpc<{ id: string; memberName: string; kind: string; status: string; attempts: number; createdAt: string }[]>('rk_delivery_queue'),
     partnerEmployees: (partnerId: string) => rpc<PortalEmployee[]>('rk_partner_employees', { p_partner: partnerId }),
     createPartnerEmployee: (partnerId: string, name: string) => rpc<{ id: string; code: string }>('rk_create_partner_employee', { p_partner: partnerId, p_name: name }),
+    reissueEmployeeCode: (partnerId: string, employeeId: string) => rpc<{ id: string; code: string }>('rk_reissue_employee_code', { p_partner: partnerId, p_employee: employeeId }),
+    partnerMetrics: (days = 30) => rpc<PartnerMetrics>('rk_partner_metrics', { p_days: days }),
+    updateOwnPartner: (partner: { name: string; segment: string; street: string; number: string; complement: string; neighborhood: string; postalCode: string; city: string; state: string; description: string; phone: string; email: string; photoPath?: string | null }) => rpc<void>('rk_update_own_partner', { p_name: partner.name, p_segment: partner.segment, p_street: partner.street, p_number: partner.number, p_complement: partner.complement, p_neighborhood: partner.neighborhood, p_postal_code: partner.postalCode, p_city: partner.city, p_state: partner.state, p_description: partner.description, p_phone: partner.phone, p_email: partner.email, p_photo_path: partner.photoPath || null }),
     partnerPurchasesPage: (partnerId: string, cursor: PageCursor | null = null) => rpc<CursorPage<PortalPurchase>>('rk_partner_purchases_page', { p_partner: partnerId, p_at: cursor?.at || null, p_id: cursor?.id || null }),
     employees: () => rpc<PortalEmployee[]>('rk_employees'),
     startWork: (code: string, establishmentCode: string) => rpc<PortalContext>('rk_start_work', { p_code: code, p_establishment_code: establishmentCode.trim().toUpperCase() }),

@@ -15,6 +15,7 @@ import { PurchaseHistory } from '../partner/PurchaseHistory'
 import { MemberDirectory } from './MemberDirectory'
 
 const ConnectedBilling = lazy(() => import('./ConnectedBilling').then(module => ({ default: module.ConnectedBilling })))
+const ConnectedExport = lazy(() => import('./ConnectedExport').then(module => ({ default: module.ConnectedExport })))
 
 export function ConnectedAdmin({ api, context, refresh, online, tab, openCollections, go }: { api: Portal; context: PortalContext; partners: PublicPartner[]; refresh: () => Promise<void>; online: boolean; tab: string; openCollections: () => void; go: (path: string) => void }) {
   const viewer = context.role === 'viewer'
@@ -33,10 +34,11 @@ export function ConnectedAdmin({ api, context, refresh, online, tab, openCollect
   async function refreshOverview() { setRefreshing(true); try { await run(load, true) } finally { setRefreshing(false) } }
 
 
-  return <div className="admin-portal"><div className="welcome-row"><div><h1>{tab === 'visao' ? 'Visão geral' : tab === 'faturamento' ? 'Faturamento' : tab === 'suporte' ? 'Suporte' : tab === 'relatorios' ? 'Relatórios' : tab === 'compras' ? 'Compras registradas' : tab === 'parceiros' ? 'Parceiros' : tab === 'equipe' ? 'Equipe' : tab === 'cobrancas' ? 'Cobranças e suporte' : 'Associados'}</h1><p>{viewer ? 'Consulta da diretoria' : 'Operação RKMED'}</p></div>{tab !== 'relatorios' && <Button variant="outline" disabled={busy || !online} aria-busy={refreshing} onClick={() => void (tab === 'visao' || tab === 'faturamento' ? refreshOverview() : run(load))}>{refreshing && <LoaderCircle className="animate-spin" size={16} aria-hidden="true" />}Atualizar dados</Button>}</div>
+  return <div className="admin-portal"><div className="welcome-row"><div><h1>{tab === 'visao' ? 'Visão geral' : tab === 'faturamento' ? 'Faturamento' : tab === 'exportar' ? 'Exportar dados' : tab === 'suporte' ? 'Suporte' : tab === 'relatorios' ? 'Relatórios' : tab === 'compras' ? 'Compras registradas' : tab === 'parceiros' ? 'Parceiros' : tab === 'equipe' ? 'Equipe' : tab === 'cobrancas' ? 'Cobranças e suporte' : 'Associados'}</h1><p>{viewer ? 'Consulta da diretoria' : 'Operação RKMED'}</p></div>{tab !== 'relatorios' && tab !== 'exportar' && <Button variant="outline" disabled={busy || !online} aria-busy={refreshing} onClick={() => void (tab === 'visao' || tab === 'faturamento' ? refreshOverview() : run(load))}>{refreshing && <LoaderCircle className="animate-spin" size={16} aria-hidden="true" />}Atualizar dados</Button>}</div>
     {error && <p role="alert" className="inline-error">{error}</p>}{notice && <p role="status" className="inline-success">{notice}</p>}
     {tab === 'visao' ? <ConnectedOverview api={api} online={online} go={go} revision={revision} />
       : tab === 'faturamento' ? <Suspense fallback={<p role="status">Carregando faturamento…</p>}><ConnectedBilling api={api} online={online} viewer={viewer} go={go} revision={revision} /></Suspense>
+      : tab === 'exportar' ? (viewer ? <p role="alert" className="inline-error">Exportação indisponível para o perfil de diretoria.</p> : <Suspense fallback={<p role="status">Carregando exportação…</p>}><ConnectedExport api={api} online={online} /></Suspense>)
       : tab === 'suporte' ? (viewer ? <p role="alert" className="inline-error">Acesso restrito à equipe de atendimento.</p> : <ConnectedSupport api={api} online={online} revision={revision} />)
       : tab === 'relatorios' ? <ConnectedReports api={api} viewer={viewer} online={online} /> : tab === 'compras' ? <section className="surface-card counter-flow"><PurchaseHistory api={api} online={online} revision={revision} reverse={viewer || !online ? undefined : p => setSelected({ type: 'reverse', id: p.id, name: p.memberName })} /></section>
       : tab === 'parceiros' ? <ConnectedPartners api={api} actorId={context.userId} viewer={viewer} online={online} done={refresh} revision={revision} />
