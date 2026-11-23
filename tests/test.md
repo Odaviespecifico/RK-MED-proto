@@ -84,7 +84,7 @@ No Docker, telefones reservados no arquivo `supabase/config.toml` têm OTP `4829
 
 - [ ] **PUB-01 — Página inicial:** abrir `/`, percorrer todas as seções e usar os botões de entrar/cadastro. Esperado: navegação correta, mensalidade de **R$ 69,90**, textos legíveis e ausência de telas quebradas.
 - [ ] **PUB-02 — Parceiros e mapa:** conferir categoria, endereço e desconto dos parceiros; selecionar endereços e abrir o Google Maps. Esperado: link correspondente ao parceiro selecionado; sem chave de mapa incorporado, endereço e link continuam disponíveis.
-- [ ] **PUB-03 — Documentos:** abrir Termos e Privacidade, além dos documentos apresentados no cadastro. Esperado: conteúdo carregado e versões identificáveis. Documentos de teste mantêm o aviso de texto gerado por IA; conteúdo indisponível não permite aceitar silenciosamente.
+- [ ] **PUB-03 — Documentos:** abrir Termos e Privacidade, além dos documentos apresentados no cadastro. Esperado: conteúdo carregado, versões identificáveis e sem avisos de texto gerado por IA; conteúdo indisponível não permite aceitar silenciosamente.
 - [ ] **PUB-04 — Menu móvel:** em tela de 360 px e em celular, abrir/fechar o menu e acessar links. Esperado: nenhum corte horizontal e controles alcançáveis.
 
 ## 4. Cadastro e autenticação — RF-CAD, D05, D11, D12, D20, D26

@@ -44,7 +44,6 @@ export function activeWorkAssignment(state: Pick<DemoState, 'partners' | 'employ
 export const DEMO_OTP = '123456'
 export const DEMO_PASSWORD = 'demo123'
 export const DEMO_EMPLOYEE_CODE = '2468'
-export const LEGAL_WARNING = 'Esse texto deve ser modificado por ter sido inteiramente gerado por IA e serve apenas para testes.'
 export const demoPartners: Partner[] = [
   { id: 'vida', establishmentCode: 'RKMED00001', name: 'Laboratório Vida', segment: 'Laboratório', discount: 20, address: 'Rua da Matriz, 145 · Carpina, PE', initials: 'LV', tone: 'sage' },
   { id: 'movimento', establishmentCode: 'RKMED00002', name: 'Movimento Studio', segment: 'Academia', discount: 15, address: 'Av. Estácio Coimbra, 218 · Carpina, PE', initials: 'MS', tone: 'sand' },

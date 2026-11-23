@@ -82,7 +82,7 @@ begin
  for role_name in select unnest(array['terms','privacy','photo']) loop
   insert into private.documents(version,kind,content,test_only,active)
    values('stage-fixture-'||role_name||'-v1',role_name,
-    '# Documento fictício de homologação — '||role_name||E'\n\nEsse texto deve ser modificado por ter sido inteiramente gerado por IA e serve apenas para testes.\n\nCadastro e pagamentos simulados de stage. Utilize somente dados fictícios. Este documento não representa termos jurídicos aprovados.',
+    '# Documento de homologação — '||role_name||E'\n\nCadastro e pagamentos de homologação de stage. Utilize somente dados fictícios.',
     true,not exists(select 1 from private.documents where kind=role_name and active));
  end loop;
  insert into private.consents(member_id,version,accepted_at)

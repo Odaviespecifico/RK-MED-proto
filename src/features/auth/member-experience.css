@@ -15,9 +15,9 @@
 .enrollment-desktop-controls .button { min-width: 44px; min-height: 44px; color: #fffaf0; border: 1px solid #7b6d57; }
 .enrollment-desktop-controls .button:hover:not(:disabled) { background: #4b4439; }
 .enrollment-benefits .enrollment-benefit-foot { display: flex; gap: 10px; align-items: center; font-size: 12px; }
-.enrollment-main { min-width: 0; padding: 48px clamp(24px, 5vw, 80px); display: flex; justify-content: center; align-items: flex-start; }
+.enrollment-main { min-width: 0; min-height: 100dvh; padding: 48px clamp(24px, 5vw, 80px); display: flex; justify-content: center; align-items: flex-start; }
 .enrollment-main[hidden] { display: none; }
-.enrollment-card { width: 100%; max-width: 520px; min-width: 0; }
+.enrollment-card { width: 100%; max-width: 520px; min-width: 0; margin: auto 0; }
 .enrollment-card h2 { font-size: 29px; font-weight: 700; line-height: 1.25; margin: 25px 0 12px; }
 .enrollment-card p { color: #625f57; font-size: 14px; line-height: 1.7; }
 .enrollment-card form { margin-top: 24px; }
@@ -38,6 +38,10 @@
 .enrollment-card details p { white-space: pre-wrap; max-height: 240px; overflow-y: auto; }
 .enrollment-card .enrollment-legal-warning { font-size: 12px; }
 .enrollment-card input[type='checkbox'] { width: 18px; height: 18px; accent-color: var(--gold); vertical-align: middle; }
+.enrollment-consent { display: flex; align-items: flex-start; gap: 10px; margin: 20px 0; color: #37342e; font-size: 13px; line-height: 1.6; }
+.enrollment-consent input[type='checkbox'] { flex: 0 0 auto; margin-top: 2px; }
+.enrollment-consent label { font-weight: 500; cursor: pointer; }
+.enrollment-consent a { color: #795b35; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 .enrollment-card img { max-width: 100%; border-radius: 14px; margin: 16px auto; object-fit: cover; }
 .enrollment-card video { max-width: 100%; }
 .enrollment-payment { display: grid; gap: 16px; }

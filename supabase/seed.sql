@@ -40,56 +40,7 @@ begin
     ('20000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000002','Pedro — TESTE',extensions.crypt('1357',extensions.gen_salt('bf'))) on conflict(id) do nothing;
 end $$;
 
-insert into private.documents(version,kind,content,test_only) values('test-terms-v1','terms','# Termos de uso — RKMED Linha Gold — MOCK
-
-**Esse texto deve ser modificado por ter sido inteiramente gerado por IA e serve apenas para testes.**
-
-Versão: `mock-2026-10-06`. Ambiente: desenvolvimento e homologação.
-
-O RKMED Linha Gold é apresentado neste protótipo como um clube de benefícios para pessoas maiores de 18 anos. O cadastro utiliza dados de identificação, contato e foto para acesso ao cartão e conferência visual nos parceiros. A detecção de rosto confirma apenas a presença de um rosto na imagem; não comprova identidade.
-
-A mensalidade usada nos testes é de R$69,90, com cobrança recorrente pelo Stripe em ambiente de teste. Nenhum pagamento real deve ser realizado neste protótipo. O membro paga suas compras diretamente ao parceiro; o RKMED registra o valor e o desconto, sem receber o pagamento da compra.
-
-O cartão possui QR estático e deve ser usado pelo próprio titular. O parceiro precisa de internet para verificar a situação atual e registrar a compra. Uma falha de pagamento retira imediatamente o acesso aos benefícios, ainda que o cartão salvo no celular apresente dados antigos. As retentativas previstas são D+0, D+1 e D+3.
-
-As seções do aplicativo podem exibir cópias salvas sem internet. Elas mostram a data de atualização e não garantem a disponibilidade atual de um benefício. Alterações de cobrança, pagamentos e envio de mensagens dependem de conexão. O navegador pode apagar dados locais.
-
-Cancelamento, retorno ao clube, contestação de registros e atendimento dependem de procedimentos ainda em definição. Contato de teste: suporte@example.invalid. Regras definitivas de contratação e cancelamento serão substituídas após revisão e aprovação.
-',true) on conflict(version) do nothing;
-
-insert into private.documents(version,kind,content,test_only) values('test-privacy-v1','privacy','# Aviso de privacidade — MOCK
-
-**Esse texto deve ser modificado por ter sido inteiramente gerado por IA e serve apenas para testes.**
-
-Versão: `mock-2026-10-06`. Utilizar somente dados fictícios.
-
-Controlador: [DEFINIR RESPONSÁVEL LEGAL]. Contato: privacidade@example.invalid.
-
-O protótipo prevê nome, CPF, data de nascimento, contatos, foto, registros de aceite, situação da assinatura e valores de compras/descontos. Não prevê diagnóstico, prontuário ou categoria de exame. A senha de uso permanente por PIN foi removida; o primeiro cadastro exige verificação por código no e-mail e no telefone (WhatsApp via Twilio, com SMS como alternativa de entrega). Depois, o acesso pode usar um desses contatos verificados.
-
-Os dados simulados permitem testar adesão, autenticação, cobrança, conferência visual no parceiro, registro de descontos e suporte. O parceiro recebe somente as informações necessárias para o atendimento autorizado. Administração, suporte RK e diretoria têm permissões distintas; O CPF completo não é exibido para operadores, inclusive administradores; a busca exata autorizada retorna apenas uma versão mascarada.
-
-Supabase, Stripe, Twilio e Resend integram o desenho técnico. Resend envia e-mails de verificação e comunicações transacionais. O serviço de detecção facial está em definição. A relação final de operadores, finalidades, bases legais e transferências será revisada antes da produção.
-
-No celular, uma cópia dos dados aprovados da área do membro permanece disponível sem prazo de expiração imposto pelo aplicativo. Sair da conta ou trocar de usuário deve limpar essa cópia. O navegador pode removê-la por conta própria; o aplicativo deve informar a data da última sincronização. Proteja o acesso ao dispositivo.
-
-Prazos de retenção no servidor, procedimentos de exclusão, atendimento aos direitos do titular e resposta a incidentes estão pendentes de revisão jurídica. Este mock não define prazo legal. Para testes, usar privacidade@example.invalid.
-',true) on conflict(version) do nothing;
-
-insert into private.documents(version,kind,content,test_only) values('test-photo-v1','photo','# Aviso e aceite de foto — MOCK
-
-**Esse texto deve ser modificado por ter sido inteiramente gerado por IA e serve apenas para testes.**
-
-Versão: `mock-2026-10-06`.
-
-A foto será usada no protótipo para testar a exibição do cartão e a conferência visual durante uma compra no parceiro. O processamento automático verifica se existe um rosto na foto. Ele não realiza reconhecimento de identidade nem prova de vida.
-
-Usar apenas imagens fictícias/autorizadas para teste. O desenho prevê armazenamento privado e acesso restrito ao titular e aos operadores autorizados. As condições definitivas de tratamento, eventual cópia offline, compartilhamento com o processador de imagem e exclusão aguardam aprovação.
-
-Checkbox de teste, inicialmente desmarcado: “Li este aviso de teste e concordo em prosseguir com dados fictícios.”
-
-Registrar versão e momento do aceite apenas como fixture. Este registro não substitui consentimento ou outra base legal aprovada para o produto real.
-',true) on conflict(version) do nothing;
+-- Legal documents are seeded via migrations (see 20261122183000_legal_documents_br_v1.sql).
 
 -- Pending identity for dual-contact enrollment acceptance; no member/role/benefits yet.
 insert into auth.users(instance_id,id,aud,role,email,encrypted_password,email_confirmed_at,

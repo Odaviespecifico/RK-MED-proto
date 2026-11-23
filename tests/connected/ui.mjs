@@ -19,11 +19,11 @@ try {
     await page.getByRole('button', { name: 'Entrar', exact: true }).click()
   }
   async function signout() { await page.getByRole('button', { name: 'Abrir navegação' }).click(); await page.getByRole('button', { name: 'Sair', exact: true }).click(); await page.waitForURL(origin + '/') }
-  for (const [path, title] of [['termos', 'Termos de uso'], ['privacidade', 'Aviso de privacidade']]) {
+  for (const [path, title] of [['termos', 'Termos de Uso'], ['privacidade', 'Política de Privacidade']]) {
     await page.goto(`${origin}/${path}`)
     await page.getByRole('heading', { name: title, exact: true }).waitFor()
-    await page.getByText(/^Versão: test-/).waitFor()
-    assert.ok(await page.getByText('Esse texto deve ser modificado por ter sido inteiramente gerado por IA e serve apenas para testes.', { exact: false }).count())
+    await page.getByText(/^Versão: (terms|privacy)-/).waitFor()
+    assert.equal(await page.getByText('gerado por IA', { exact: false }).count(), 0)
   }
   await login('parceiro@rkmed.test')
   assert.equal(await page.locator('select').count(), 0)

@@ -1,37 +1,35 @@
-# Modelos de comunicação — MOCK
+# Modelos de Comunicação Transacional — RKMED Linha Gold
 
-**Esse texto deve ser modificado por ter sido inteiramente gerado por IA e serve apenas para testes.**
-
-Versão: `mock-2026-10-06`. Mostrar o aviso nos modelos abaixo e nas páginas legais. O e-mail transacional de código de acesso (OTP) é uma mensagem de segurança e não leva o aviso; ver D31 em [plan.md](../../plan.md). Usar somente destinatários capturados pelo ambiente local; canal/provedor definitivo pendente.
+Versão: `2026-11-22-v1`. Modelos utilizados para notificações transacionais (e-mail via Resend e SMS via ClickSend).
 
 ## Boas-vindas
 
-Olá, {{primeiro_nome}}. Sua assinatura de teste foi ativada. Acesse seu cartão em {{link_app}}. No parceiro, apresente seu QR para conferência e registro do desconto.
+Olá, {{primeiro_nome}}. Sua assinatura RKMED Linha Gold está ativa. Acesse seu cartão digital em {{link_app}}. Nos estabelecimentos parceiros, apresente seu código QR para conferência visual e registro do desconto.
 
 ## Compra registrada
 
-Registramos uma compra de teste em {{parceiro}}: valor bruto {{valor_bruto}}, desconto {{desconto}}, valor final {{valor_final}}. Sua economia acumulada é {{economia_total}}. Se não reconhecer este registro, procure o suporte.
+Registramos uma compra em {{parceiro}}: valor bruto {{valor_bruto}}, desconto {{desconto}} e valor final {{valor_final}}. Sua economia acumulada no RKMED Linha Gold é de {{economia_total}}. Caso não reconheça este registro, entre em contato pelo suporte no aplicativo.
 
-## Falha de cobrança — membro
+## Falha de cobrança — associado
 
-Não foi possível confirmar sua mensalidade de teste. Seus benefícios estão indisponíveis até a regularização. Confira as opções em {{link_cobranca}}. Nunca envie dados de cartão por mensagem.
+Não foi possível confirmar o pagamento da sua mensalidade RKMED Linha Gold. Seus benefícios encontram-se temporariamente suspensos até a regularização. Acesse {{link_cobranca}} para atualizar sua forma de pagamento. Nunca envie dados de cartão por mensagem ou e-mail.
 
-## Falha de cobrança — operação RK
+## Falha de cobrança — operação RKMED
 
-O cadastro de teste {{referencia_interna}} está sem acesso aos benefícios por falha de cobrança. Consulte os detalhes no painel autorizado em {{link_painel}}. Destinatários finais desta notificação ainda serão definidos.
+A assinatura {{referencia_interna}} teve falha de cobrança e está com benefícios suspensos. Consulte os detalhes e o histórico de cobrança no painel administrativo em {{link_painel}}.
 
-## Reativação
+## Reativação da assinatura
 
-Recebemos a confirmação do pagamento de teste. Consulte seu cartão para verificar sua situação atual. Uma restrição administrativa independente pode exigir atendimento do suporte.
+Recebemos a confirmação do seu pagamento. Consulte seu cartão digital no aplicativo para verificar a situação atualizada da sua assinatura. Em caso de dúvida, fale com nosso suporte.
 
-## Reversão de registro
+## Estorno de registro de compra
 
-O registro de teste {{referencia_transacao}} em {{parceiro}} foi revertido. Sua economia foi atualizada. Isso altera o registro do benefício e não representa reembolso pelo Stripe.
+O registro {{referencia_transacao}} em {{parceiro}} foi estornado e sua economia acumulada foi recalculada. Este estorno refere-se exclusivamente ao registro do desconto no clube de benefícios e não representa reembolso financeiro no Stripe.
 
 ## Parceiro sem atividade
 
-O parceiro de teste {{parceiro}} está sem registros há {{dias}} dias. Consulte o painel para acompanhar a operação.
+O estabelecimento parceiro {{parceiro}} está sem registros de compras há {{dias}} dias. Consulte o painel administrativo para acompanhamento.
 
-## Código de acesso
+## Código de acesso (OTP)
 
-Seu código temporário de teste é {{otp}}. Não compartilhe. Se você não solicitou o acesso, ignore esta mensagem. A verificação prevê e-mail e SMS pelo provedor configurado no Supabase Auth; no primeiro cadastro, confirmar e-mail e telefone; depois, um deles é suficiente. Se o código não chegar, solicite um novo código pelo mesmo canal.
+Seu código temporário de acesso ao RKMED Linha Gold é {{otp}}. Ele é pessoal e expira em 5 minutos — não compartilhe com terceiros. Se você não solicitou este código, ignore esta mensagem.
