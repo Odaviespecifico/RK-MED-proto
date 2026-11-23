@@ -1,13 +1,14 @@
 export class PublicError extends Error {}
-// Match complete origins only; callbacks keep using the canonical APP_ORIGIN.
+// In non-production (local/sandbox/stage) allow any browser origin to avoid blocking preview/stage hosts.
+// Production strictly matches complete HTTPS origins only; callbacks keep using the canonical APP_ORIGIN.
 export function allowedRequestOrigin(request: Request, env: Record<string, string | undefined>) {
   const origin = request.headers.get('origin')
+  if (env.APP_ENV !== 'production') return origin || '*'
   if (!origin || origin === 'null') return undefined
   try {
     const url = new URL(origin)
     if (url.origin !== origin) return undefined
-    const loopback = url.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(url.hostname)
-    if (url.protocol !== 'https:' && !(loopback && ['local', 'sandbox'].includes(env.APP_ENV || ''))) return undefined
+    if (url.protocol !== 'https:') return undefined
     const allowed = [env.APP_ORIGIN, ...(env.CORS_ALLOWED_ORIGINS || '').split(',').map(value => value.trim())]
     return allowed.includes(origin) ? origin : undefined
   } catch { return undefined }

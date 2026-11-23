@@ -10,7 +10,7 @@ test('browser gateways allow configured localhost and hosted preflights and reta
     globalThis.Deno = { env: { toObject: () => env }, serve: fn => { handler = fn } }
     await import(`../../supabase/functions/${name}/index.ts?cors`)
     const send = (origin, method = 'OPTIONS') => handler(new Request(`https://example.invalid/${name}`, { method, headers: { origin, 'content-type': 'application/json', 'access-control-request-method': 'POST', 'access-control-request-headers': 'authorization,apikey,content-type,x-client-info' }, ...(method === 'POST' ? { body: '{}' } : {}) }))
-    for (const origin of [env.APP_ORIGIN, 'http://127.0.0.1:5175', 'http://localhost:5175']) {
+    for (const origin of [env.APP_ORIGIN, 'http://127.0.0.1:5175', 'http://localhost:5175', 'https://rk-med-proto-git-stage-odaviespecificos-projects.vercel.app']) {
       const preflight = await send(origin)
       assert.equal(preflight.status, 200)
       assert.equal(preflight.headers.get('access-control-allow-origin'), origin)
@@ -20,13 +20,13 @@ test('browser gateways allow configured localhost and hosted preflights and reta
       assert.ok(failure.status >= 400)
       assert.equal(failure.headers.get('access-control-allow-origin'), origin)
     }
-    for (const origin of ['https://rkmed.vercel.app.evil.test', 'null', 'http://127.0.0.1:5000']) {
+    env.APP_ENV = 'production'
+    assert.equal((await send(env.APP_ORIGIN)).status, 200)
+    for (const origin of ['https://rkmed.vercel.app.evil.test', 'null', 'http://127.0.0.1:5175']) {
       const denied = await send(origin)
       assert.equal(denied.status, 403)
       assert.equal(denied.headers.get('access-control-allow-origin'), null)
     }
-    env.APP_ENV = 'production'
-    assert.equal((await send('http://127.0.0.1:5175')).status, 403)
     env.APP_ENV = 'sandbox'
   }
 })
