@@ -11,6 +11,8 @@ import { formatCnpj, validCnpj } from '../../lib/format'
 import { Button } from '../../components/ui/button'
 import { Store } from 'lucide-react'
 import { EmptyState } from '../../components/EmptyState'
+import { PageControls } from '../../components/PageControls'
+import { useClientPage } from '../../lib/useClientPage'
 
 type StaffPartner = PublicPartner & { active: boolean; isTest: boolean; establishmentCode: string | null; street?: string; number?: string | null; complement?: string | null; neighborhood?: string; postalCode?: string; city?: string; state?: string; cnpj?: string | null; phone?: string | null; email?: string | null }
 
@@ -50,6 +52,7 @@ export function ConnectedPartners({ api, actorId, viewer, online, done, revision
   }
   function matchesSearch(partner: StaffPartner) { const query = search.trim().toLocaleLowerCase('pt-BR'); const document = search.toUpperCase().replace(/[^A-Z0-9]/g, ''); return !query || [partner.name, partner.segment, partner.address].some(value => value.toLocaleLowerCase('pt-BR').includes(query)) || !!document && !!partner.cnpj && partner.cnpj.toUpperCase().includes(document) }
   const filteredPartners = partners.filter(matchesSearch)
+  const partnersPage = useClientPage(filteredPartners, 10, { resetKey: search })
   return <section className="surface-card counter-flow">
     {notice && <p role="status" className="inline-success">{notice}</p>}
     {loaded && !partners.length && <EmptyState icon={Store} title="Nenhum parceiro cadastrado" description={viewer ? 'Os parceiros cadastrados aparecerão aqui.' : 'Use Adicionar parceiro para adicionar o primeiro estabelecimento.'} />}
@@ -59,7 +62,7 @@ export function ConnectedPartners({ api, actorId, viewer, online, done, revision
     {!loaded && error && <Button variant="outline" disabled={!online} onClick={() => { setError(''); void refresh().catch(() => setError('Não foi possível carregar os parceiros.')) }}>Tentar carregar parceiros novamente</Button>}
     {loaded && partners.length > 0 && !filteredPartners.length && <EmptyState icon={Store} title="Nenhum parceiro encontrado" description="Confira os dados informados ou limpe a busca." />}
     {loaded && partners.length > 0 && !filteredPartners.length && <Button variant="outline" onClick={() => setSearch('')}>Limpar busca</Button>}
-    {filteredPartners.map(p => <article key={p.id} className="partner-directory-entry">
+    {partnersPage.items.map(p => <article key={p.id} className="partner-directory-entry">
       <button type="button" className="partner-detail-trigger" disabled={busy} aria-expanded={id === p.id} aria-controls={`partner-${p.id}`} onClick={() => choose(id === p.id ? '' : p.id)}><span><b>{p.name}</b><small>{p.segment} · {p.active ? 'Ativo' : 'Inativo'}</small></span><span>{p.discount}% · {id === p.id ? 'Fechar' : 'Ver detalhes'}</span></button>
       {id === p.id && <div id={`partner-${p.id}`} className="counter-flow partner-detail-content">
         {p.photoUrl && <img className="partner-detail-photo" src={p.photoUrl} alt={`Foto de ${p.name}`} />}
@@ -71,6 +74,7 @@ export function ConnectedPartners({ api, actorId, viewer, online, done, revision
         <section className="counter-flow"><h3>Uso registrado</h3><p>Compras e descontos registrados neste parceiro.</p><PurchaseHistory key={p.id} api={api} online={online} revision={revision} partnerId={p.id} /></section>
       </div>}
     </article>)}
+    {partnersPage.totalPages > 1 && <PageControls label="Páginas de parceiros" page={partnersPage} />}
     {!viewer && editing && <form className="counter-flow" aria-label="Dados do parceiro" onSubmit={event => void submit(event)}><h2>{id ? 'Editar parceiro' : 'Cadastrar parceiro'}</h2>
       <label className="field-label">Nome<input className="input" value={name} onChange={event => setName(event.target.value)} required minLength={2} maxLength={160} /></label>
       <label className="field-label">Categoria<input className="input" value={segment} onChange={event => setSegment(event.target.value)} required maxLength={160} /></label>
